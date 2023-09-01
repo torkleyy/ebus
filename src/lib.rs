@@ -1,9 +1,9 @@
-#![no_std]
+//#![no_std]
 
-use core::{fmt::Debug, marker::PhantomData, time::Duration};
+use core::{fmt::Debug, time::Duration};
 
-use crc::Crc;
-use telegram::Telegram;
+pub use crc::Crc;
+pub use telegram::Telegram;
 
 mod crc;
 mod telegram;
@@ -15,17 +15,11 @@ const ESCAPE_PREFIX: u8 = 0xA9;
 
 pub const FAIRNESS_MAX: u8 = 50;
 
-pub trait EbusConfig {
-    const POLY_TELEGRAM: u8;
-    const POLY_DATA: u8;
-}
-
-pub struct EbusDriver<C> {
+pub struct EbusDriver {
     crc_poly_telegram: u8,
     crc_poly_data: u8,
     arbitration_delay: u32,
 
-    marker: PhantomData<C>,
     flags: Flags,
     /// Fairness counter, confusingly called "lock counter" in spec.
     ///
@@ -34,13 +28,9 @@ pub struct EbusDriver<C> {
     state: State,
 }
 
-impl<C> EbusDriver<C>
-where
-    C: EbusConfig,
-{
+impl EbusDriver {
     pub fn new(arbitration_delay: u32, crc_poly_telegram: u8, crc_poly_data: u8) -> Self {
         EbusDriver {
-            marker: Default::default(),
             flags: Default::default(),
             fairness_counter: FAIRNESS_MAX,
             state: State::Idle,
@@ -79,7 +69,7 @@ where
         } else {
             // we are not in idle state, there must be a msg
             let msg = next_msg.unwrap();
-            self.process_slow(word, transmit, sleep, msg)
+            std::dbg!(self.process_slow(word, transmit, sleep, msg))
         }
     }
 
@@ -304,6 +294,7 @@ impl State {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum ProcessResult {
     None,
     AckOk,
@@ -351,7 +342,7 @@ pub enum Flag {
 }
 
 pub trait Transmit {
-    type Error;
+    type Error: Debug;
 
     fn transmit_raw(&mut self, bytes: &[u8]) -> Result<(), Self::Error>;
 

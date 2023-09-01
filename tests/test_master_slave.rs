@@ -2,8 +2,6 @@ use std::time::Duration;
 
 use ebus::{EbusDriver, Telegram, Transmit};
 
-const EXAMPLE_EXCHANGE1: &[u8] = &[0xAAu8, 0x00]; // TODO
-
 struct TestTransmitter {
     sent: Vec<u8>,
 }
@@ -22,6 +20,10 @@ fn sleep(_: Duration) {}
 
 #[test]
 fn test_example1() {
+    env_logger::Builder::default()
+        .filter_level(log::LevelFilter::Debug)
+        .init();
+
     let mut transmitter = TestTransmitter { sent: vec![] };
     let msg = Telegram {
         src: 0xFF,
@@ -34,9 +36,12 @@ fn test_example1() {
 
     let mut driver = EbusDriver::new(123, 0x9B, 0x5C);
 
-    driver
-        .process(0xAA, &mut transmitter, sleep, Some(&msg))
-        .unwrap();
+    // deal with fairness counter
+    for _ in 0..51 {
+        driver
+            .process(0xAA, &mut transmitter, sleep, Some(&msg))
+            .unwrap();
+    }
 
     loop {
         if transmitter.sent.is_empty() {
@@ -57,13 +62,13 @@ fn test_example1() {
     }
 
     let res = driver
-        .process(0xB1, &mut transmitter, sleep, Some(&msg))
+        .process(0x82, &mut transmitter, sleep, Some(&msg))
         .unwrap();
     match res {
         ebus::ProcessResult::Reply { buf, len } => {
             let buf = &buf[..len as usize];
 
-            assert_eq!(EXAMPLE_EXCHANGE1, buf);
+            assert_eq!(&[0xA9, 0xDA], buf);
         }
         other => unreachable!("{:?}", other),
     }

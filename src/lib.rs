@@ -100,6 +100,12 @@ impl EbusDriver {
         sleep: impl Fn(Duration),
         msg: &Telegram<'_>,
     ) -> Result<ProcessResult, T::Error> {
+        // ugly: we have to build the crc for response before converting escape sequences
+        match &mut self.state {
+            State::ReceivingData { crc, .. } => crc.add(word),
+            _ => {}
+        }
+
         if self.flags.check_remove(Flag::WasEscapePrefix) {
             if word == 0x00 {
                 word = ESCAPE_PREFIX;
@@ -109,7 +115,12 @@ impl EbusDriver {
                 log::warn!("detected invalid escape sequence");
                 self.reset();
             }
+        } else if word == ESCAPE_PREFIX {
+            self.flags.add(Flag::WasEscapePrefix);
+            return Ok(ProcessResult::None);
         }
+
+        log::debug!("processing 0x{word:X}");
 
         match &mut self.state {
             State::Idle => unreachable!(),
@@ -125,9 +136,9 @@ impl EbusDriver {
                 }
             }
             State::DataLoopback { expect } => {
-                if *expect > 0 {
-                    *expect -= 1;
-                } else {
+                log::debug!("loopback: 0x{word:X}");
+                *expect -= 1;
+                if *expect == 0 {
                     self.state = State::AwaitingAck;
                 }
             }
@@ -144,7 +155,7 @@ impl EbusDriver {
                 x => {
                     log::warn!("telegram not acknowledged");
                     if x != ACK_ERR {
-                        log::warn!("expected ack, got non-ack byte: {word}");
+                        log::warn!("expected ack, got non-ack byte: 0x{word:X}");
                     }
                     self.reset();
 
@@ -161,13 +172,22 @@ impl EbusDriver {
 
                 // TODO: handle 0 len case?
 
+                let mut crc = Crc::new(self.crc_poly_telegram);
+                crc.add(word);
+
                 self.state = State::ReceivingData {
                     buf: [0; 16],
                     cursor: 0,
                     total: word,
+                    crc,
                 };
             }
-            State::ReceivingData { buf, cursor, total } => {
+            State::ReceivingData {
+                buf,
+                cursor,
+                total,
+                crc,
+            } => {
                 buf[*cursor as usize] = word;
                 *cursor += 1;
 
@@ -175,15 +195,12 @@ impl EbusDriver {
                     self.state = State::AwaitingCrc {
                         buf: *buf,
                         len: *total,
+                        crc: crc.calc_crc(),
                     };
                 }
             }
-            State::AwaitingCrc { buf, len } => {
-                let crc_should = {
-                    let mut crc = Crc::new(self.crc_poly_telegram);
-                    crc.add_multiple(&buf[..*len as usize]);
-                    crc.calc_crc()
-                };
+            State::AwaitingCrc { crc, buf, len } => {
+                let crc_should = *crc;
 
                 if word == crc_should {
                     transmit.transmit_raw(&[ACK_OK])?;
@@ -196,6 +213,7 @@ impl EbusDriver {
 
                     return Ok(res);
                 } else {
+                    log::warn!("got crc 0x{word:X}, expected 0x{crc_should:X}");
                     transmit.transmit_raw(&[ACK_ERR])?;
                     sleep(Duration::from_millis(15));
                     self.success(transmit)?;
@@ -269,8 +287,10 @@ pub enum State {
         buf: [u8; 16],
         cursor: u8,
         total: u8,
+        crc: Crc,
     },
     AwaitingCrc {
+        crc: u8,
         buf: [u8; 16],
         len: u8,
     },
@@ -330,7 +350,7 @@ impl Flags {
     }
 
     pub fn has(&mut self, flag: Flag) -> bool {
-        (self.flags & (flag as u8)) != 0
+        (self.flags & (1 << flag as u8)) != 0
     }
 }
 

@@ -8,5 +8,8 @@ edition = "2021"
 [dependencies]
 log = { version = "*", optional = true }
 
+[dev-dependencies]
+env_logger = "*"
+
 [features]
 default = ["log"]

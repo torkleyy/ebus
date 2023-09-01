@@ -1,6 +1,6 @@
 use std::io::{stdin, BufRead};
 
-use ebus::Crc;
+use energy_bus::Crc;
 
 fn main() {
     let mut stdin = stdin().lock();

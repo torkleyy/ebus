@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ebus::{EbusDriver, Telegram, Transmit};
+use energy_bus::{EbusDriver, ProcessResult, Telegram, Transmit};
 
 struct TestTransmitter {
     sent: Vec<u8>,
@@ -65,7 +65,7 @@ fn test_example1() {
         .process(0x82, &mut transmitter, sleep, Some(&msg))
         .unwrap();
     match res {
-        ebus::ProcessResult::Reply { buf, len } => {
+        ProcessResult::Reply { buf, len } => {
             let buf = &buf[..len as usize];
 
             assert_eq!(&[0xA9, 0xDA], buf);

@@ -44,20 +44,43 @@ pub trait EbusInterface {
     ///
     /// ## Returns
     ///
-    /// * `Ok(true)` on successful reads of all bytes
-    /// * `Ok(false)` if not all bytes could be received in time
+    /// * `Ok(n)` on successful read of the byte
     /// * `Err(_)` if general IO error occured
-    fn rx_bytes_exact(
-        &mut self,
-        bytes: &mut [u8],
-        block_for: Duration,
-        max_trys: Option<u8>,
-    ) -> Result<bool, Self::Error> {
-        let max_trys = max_trys.unwrap_or(bytes.len() as u8);
-        for _ in 0..max_trys {}
+    fn rx_single(&mut self, block_for: Duration) -> Result<u8, Self::Error> {
+        let mut bytes = [0];
+        self.rx_bytes(&mut bytes, block_for)?;
 
-        Ok(false)
+        Ok(bytes[0])
     }
 }
 
-pub struct EbusHandler {}
+pub struct EbusDriver<I> {
+    pub interface: I,
+    pub state: EbusState,
+}
+
+pub struct EbusState {
+    pub flags: u8,
+}
+
+impl EbusState {
+    pub fn add(&mut self, flag: Flag) {
+        self.flags |= 1 << flag as u8;
+    }
+
+    pub fn remove(&mut self, flag: Flag) {
+        self.flags &= !(1 << flag as u8);
+    }
+
+    pub fn has(&mut self, flag: Flag) -> bool {
+        (self.flags & (flag as u8)) != 0
+    }
+}
+
+#[repr(u8)]
+pub enum Flag {
+    /// Are we allowed to send?
+    BusLock = 0,
+    /// Last byte we received was 0x9F prefix
+    WasEscapePrefix = 1,
+}

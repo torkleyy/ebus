@@ -1,14 +1,16 @@
-pub struct Crc<const POLY: u8> {
+pub struct Crc {
     crc: u8,
+    polynom: u8,
 }
 
-impl<const POLY: u8> Crc<POLY> {
+impl Crc {
     const CRC_WIDTH: u8 = 8;
     const CRC_INIT: u8 = 0x00;
 
-    pub fn new() -> Self {
+    pub fn new(polynom: u8) -> Self {
         Crc {
             crc: Self::CRC_INIT,
+            polynom,
         }
     }
 
@@ -17,7 +19,7 @@ impl<const POLY: u8> Crc<POLY> {
 
         for _ in 0..Self::CRC_WIDTH {
             if self.crc & 0x80 != 0 {
-                polynom = POLY;
+                polynom = self.polynom;
             } else {
                 polynom = 0;
             }
@@ -26,7 +28,7 @@ impl<const POLY: u8> Crc<POLY> {
                 self.crc |= 1;
             }
             self.crc ^= polynom;
-            byte = byte << 1;
+            byte <<= 1;
         }
     }
 
@@ -36,7 +38,7 @@ impl<const POLY: u8> Crc<POLY> {
         }
     }
 
-    pub fn crc(&self) -> u8 {
+    pub fn calc_crc(&self) -> u8 {
         self.crc
     }
 }

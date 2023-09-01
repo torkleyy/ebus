@@ -1,4 +1,4 @@
-//#![no_std]
+#![no_std]
 
 use core::{fmt::Debug, time::Duration};
 
@@ -69,7 +69,7 @@ impl EbusDriver {
         } else {
             // we are not in idle state, there must be a msg
             let msg = next_msg.unwrap();
-            std::dbg!(self.process_slow(word, transmit, sleep, msg))
+            self.process_slow(word, transmit, sleep, msg)
         }
     }
 
@@ -101,9 +101,8 @@ impl EbusDriver {
         msg: &Telegram<'_>,
     ) -> Result<ProcessResult, T::Error> {
         // ugly: we have to build the crc for response before converting escape sequences
-        match &mut self.state {
-            State::ReceivingData { crc, .. } => crc.add(word),
-            _ => {}
+        if let State::ReceivingData { crc, .. } = &mut self.state {
+            crc.add(word);
         }
 
         if self.flags.check_remove(Flag::WasEscapePrefix) {

@@ -77,8 +77,7 @@ impl EbusDriver {
             } else {
                 Ok(ProcessResult::None)
             }
-        } else if self.state.is_idle() {
-            // most common case
+        } else if self.state.is_start() {
             // do nothing
             Ok(ProcessResult::None)
         } else {
@@ -157,8 +156,6 @@ impl EbusDriver {
             self.flags.add(Flag::WasEscapePrefix);
             return Ok(ProcessResult::None);
         }
-
-        log::debug!("processing 0x{word:X}");
 
         match &mut self.state {
             State::Unknown => {
@@ -474,7 +471,7 @@ impl State {
         !matches!(self, State::Start)
     }
 
-    pub fn is_idle(&self) -> bool {
+    pub fn is_start(&self) -> bool {
         matches!(self, State::Start)
     }
 

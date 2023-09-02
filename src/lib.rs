@@ -144,9 +144,18 @@ impl EbusDriver {
                     self.state = State::DataLoopback { expect };
                     sleep(Duration::from_millis(10));
                 } else {
-                    log::warn!("Failed to acquire lock");
-                    self.fairness_counter = 2;
-                    sleep(Duration::from_millis(20));
+                    let prio_class = word & 0x0F;
+                    let own_prio = msg.src & 0x0F;
+
+                    if prio_class == own_prio {
+                        // instantly try again
+                        self.state = State::Idle;
+                    } else {
+                        log::warn!("Failed to acquire lock");
+                        self.fairness_counter = 2;
+                        sleep(Duration::from_millis(20));
+                        self.state = State::Idle;
+                    }
                 }
             }
             State::DataLoopback { expect } => {

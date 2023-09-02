@@ -11,6 +11,15 @@ Software driver for [eBUS] (energy bus) written in Rust.
 * `no-std`
 * zero dependencies (except optional `log`)
 
+## Features
+
+* [x] Lightweight API allowing for different execution models
+* [x] Priority-based collision resolution
+* [x] Sending Master-Slave telegram
+* [ ] Receiving Master-Slave telegram
+* [ ] Master-Master
+* [ ] Broadcast
+
 ## Integration
 
 See [the integration example](examples/integration.rs).

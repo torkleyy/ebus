@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["crc","energy_bus","log"];

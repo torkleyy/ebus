@@ -34,7 +34,7 @@ fn test_example1() {
         expect_reply: true,
     };
 
-    let mut driver = EbusDriver::new(123, 0x9B, 0x5C);
+    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
 
     // deal with fairness counter
     for _ in 0..51 {
@@ -70,6 +70,58 @@ fn test_example1() {
 
             assert_eq!(&[0xA9, 0xDA], buf);
         }
+        other => unreachable!("{:?}", other),
+    }
+}
+
+#[test]
+fn test_example1_timeout() {
+    env_logger::Builder::default()
+        .filter_level(log::LevelFilter::Debug)
+        .init();
+
+    let mut transmitter = TestTransmitter { sent: vec![] };
+    let msg = Telegram {
+        src: 0xFF,
+        dest: 0x51,
+        service: 0x5022,
+        data: &[15, 0],
+        needs_data_crc: true,
+        expect_reply: true,
+    };
+
+    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
+
+    // deal with fairness counter
+    for _ in 0..51 {
+        driver
+            .process(0xAA, &mut transmitter, sleep, Some(&msg))
+            .unwrap();
+    }
+
+    loop {
+        if transmitter.sent.is_empty() {
+            break;
+        }
+
+        let word = transmitter.sent.remove(0);
+        driver
+            .process(word, &mut transmitter, sleep, Some(&msg))
+            .unwrap();
+    }
+
+    // write reply
+    for &reply_byte in &[0x00, 0x02, 0xA9, 0x00, 0xDA] {
+        driver
+            .process(reply_byte, &mut transmitter, sleep, Some(&msg))
+            .unwrap();
+    }
+
+    let res = driver
+        .process(0xAA, &mut transmitter, sleep, Some(&msg))
+        .unwrap();
+    match res {
+        ProcessResult::Timeout => {}
         other => unreachable!("{:?}", other),
     }
 }

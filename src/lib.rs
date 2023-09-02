@@ -18,7 +18,7 @@ pub const FAIRNESS_MAX: u8 = 50;
 pub struct EbusDriver {
     crc_poly_telegram: u8,
     crc_poly_data: u8,
-    arbitration_delay: u32,
+    arbitration_delay: Duration,
 
     flags: Flags,
     /// Fairness counter, confusingly called "lock counter" in spec.
@@ -29,7 +29,7 @@ pub struct EbusDriver {
 }
 
 impl EbusDriver {
-    pub fn new(arbitration_delay: u32, crc_poly_telegram: u8, crc_poly_data: u8) -> Self {
+    pub fn new(arbitration_delay: Duration, crc_poly_telegram: u8, crc_poly_data: u8) -> Self {
         EbusDriver {
             flags: Default::default(),
             fairness_counter: FAIRNESS_MAX,
@@ -48,12 +48,14 @@ impl EbusDriver {
         next_msg: Option<&Telegram<'_>>,
     ) -> Result<ProcessResult, T::Error> {
         if word == SYN {
+            let was_timeout = self.state.is_awaiting();
+
             if self.process_syn() && next_msg.is_some() {
                 #[allow(clippy::unnecessary_unwrap)]
                 let msg = next_msg.unwrap();
                 let src = msg.src;
 
-                sleep(Duration::from_micros(self.arbitration_delay as u64));
+                sleep(self.arbitration_delay);
                 transmit.transmit_encode(&[src])?;
                 self.state = State::AcquiringLock;
             } else {
@@ -61,7 +63,11 @@ impl EbusDriver {
                 sleep(Duration::from_millis(10));
             }
 
-            Ok(ProcessResult::None)
+            if was_timeout {
+                Ok(ProcessResult::Timeout)
+            } else {
+                Ok(ProcessResult::None)
+            }
         } else if self.state.is_idle() {
             // most common case
             // do nothing
@@ -308,6 +314,16 @@ impl State {
         matches!(self, State::AcquiringLock)
     }
 
+    pub fn is_awaiting(&self) -> bool {
+        matches!(
+            self,
+            Self::AwaitingAck
+                | Self::AwaitingCrc { .. }
+                | Self::AwaitingLen
+                | Self::ReceivingData { .. }
+        )
+    }
+
     pub fn reset(&mut self) {
         *self = State::Idle;
     }
@@ -318,7 +334,7 @@ pub enum ProcessResult {
     None,
     AckOk,
     AckErr,
-    BusError,
+    Timeout,
     CrcError,
     Reply { buf: [u8; 16], len: u8 },
 }

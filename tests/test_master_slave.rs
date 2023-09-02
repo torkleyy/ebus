@@ -20,10 +20,6 @@ fn sleep(_: Duration) {}
 
 #[test]
 fn test_example1() {
-    env_logger::Builder::default()
-        .filter_level(log::LevelFilter::Debug)
-        .init();
-
     let mut transmitter = TestTransmitter { sent: vec![] };
     let msg = Telegram {
         src: 0xFF,
@@ -76,10 +72,6 @@ fn test_example1() {
 
 #[test]
 fn test_example1_timeout() {
-    env_logger::Builder::default()
-        .filter_level(log::LevelFilter::Debug)
-        .init();
-
     let mut transmitter = TestTransmitter { sent: vec![] };
     let msg = Telegram {
         src: 0xFF,

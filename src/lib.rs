@@ -12,7 +12,7 @@
 use core::{fmt::Debug, time::Duration};
 
 pub use crc::Crc;
-pub use telegram::Telegram;
+pub use telegram::{Buffer, MasterTelegram, Telegram, TelegramFlag, TelegramFlags};
 
 mod crc;
 mod telegram;
@@ -42,7 +42,7 @@ impl EbusDriver {
         EbusDriver {
             flags: Default::default(),
             fairness_counter: FAIRNESS_MAX,
-            state: State::Idle,
+            state: State::Start,
             crc_poly_telegram,
             crc_poly_data,
             arbitration_delay,
@@ -54,15 +54,15 @@ impl EbusDriver {
         word: u8,
         transmit: &mut T,
         sleep: impl Fn(Duration),
-        next_msg: Option<&Telegram<'_>>,
+        next_msg: Option<&MasterTelegram>,
     ) -> Result<ProcessResult, T::Error> {
         if word == SYN {
-            let was_timeout = self.state.is_awaiting();
+            let was_timeout = self.state.master_is_awaiting();
 
             if self.process_syn() && next_msg.is_some() {
                 #[allow(clippy::unnecessary_unwrap)]
                 let msg = next_msg.unwrap();
-                let src = msg.src;
+                let src = msg.telegram.src;
 
                 sleep(self.arbitration_delay);
                 transmit.transmit_encode(&[src])?;
@@ -88,14 +88,36 @@ impl EbusDriver {
         }
     }
 
+    /// Reply to a received master-slave telegram
+    pub fn reply_as_slave<T: Transmit>(
+        &mut self,
+        data: &[u8],
+        transmit: &mut T,
+        _token: RequestToken,
+    ) -> Result<(), T::Error> {
+        if data.len() > 16 {
+            log::warn!("replying with more than 16 bytes");
+        }
+
+        transmit.transmit_encode(&[ACK_OK, data.len() as u8])?;
+
+        let mut crc = Crc::new(self.crc_poly_telegram);
+        transmit.transmit_encode_with_crc(data, &mut crc)?;
+        transmit.transmit_encode(&[crc.calc_crc()])?;
+
+        self.state = State::Replied;
+
+        Ok(())
+    }
+
     /// Returns `true` if we may lock the bus
     fn process_syn(&mut self) -> bool {
         if self.state.has_bus_lock() {
             log::warn!("unexpected SYN while holding bus lock");
-            self.reset();
+            self.reset_syn();
         } else if self.state.is_acquiring() {
             log::warn!("unexpected double SYN prevented lock");
-            self.reset();
+            self.reset_syn();
         } else if self.is_allowed_to_lock() {
             return true;
         } else {
@@ -113,7 +135,7 @@ impl EbusDriver {
         mut word: u8,
         transmit: &mut T,
         sleep: impl Fn(Duration),
-        msg: &Telegram<'_>,
+        msg: &MasterTelegram,
     ) -> Result<ProcessResult, T::Error> {
         // ugly: we have to build the crc for response before converting escape sequences
         if let State::ReceivingData { crc, .. } = &mut self.state {
@@ -127,7 +149,9 @@ impl EbusDriver {
                 word = SYN;
             } else {
                 log::warn!("detected invalid escape sequence");
-                self.reset();
+                self.reset_wait_syn();
+
+                return Ok(ProcessResult::None);
             }
         } else if word == ESCAPE_PREFIX {
             self.flags.add(Flag::WasEscapePrefix);
@@ -137,42 +161,48 @@ impl EbusDriver {
         log::debug!("processing 0x{word:X}");
 
         match &mut self.state {
-            State::Idle => unreachable!(),
+            State::Unknown => {
+                // just wait for next SYN
+            }
+            State::Start => {
+                // we are not acquiring the lock, so we just listen
+                self.state = State::GotSrc { src: word };
+            }
             State::AcquiringLock => {
-                if word == msg.src {
+                if word == msg.telegram.src {
                     let expect = self.send_data(transmit, msg)?;
                     self.state = State::DataLoopback { expect };
                     sleep(Duration::from_millis(10));
                 } else {
                     let prio_class = word & 0x0F;
-                    let own_prio = msg.src & 0x0F;
+                    let own_prio = msg.telegram.src & 0x0F;
 
                     if prio_class == own_prio {
-                        // instantly try again
-                        self.state = State::Idle;
+                        // instantly try again on next SYN
+                        self.state = State::Unknown;
                     } else {
                         log::warn!("Failed to acquire lock");
                         self.fairness_counter = 2;
                         sleep(Duration::from_millis(20));
-                        self.state = State::Idle;
+                        self.state = State::GotSrc { src: word };
                     }
                 }
             }
             State::DataLoopback { expect } => {
-                log::debug!("loopback: 0x{word:X}");
                 *expect -= 1;
                 if *expect == 0 {
                     self.state = State::AwaitingAck;
                 }
+                sleep(Duration::from_millis(0));
             }
             State::AwaitingAck => match word {
                 ACK_OK => {
-                    if msg.expect_reply {
+                    if msg.flags & TelegramFlag::ExpectReply {
                         self.state = State::AwaitingLen;
                     } else {
                         self.success(transmit)?;
 
-                        return Ok(ProcessResult::AckOk);
+                        return Ok(ProcessResult::MasterAckOk);
                     }
                 }
                 x => {
@@ -180,15 +210,15 @@ impl EbusDriver {
                     if x != ACK_ERR {
                         log::warn!("expected ack, got non-ack byte: 0x{word:X}");
                     }
-                    self.reset();
+                    self.reset_wait_syn();
 
-                    return Ok(ProcessResult::AckErr);
+                    return Ok(ProcessResult::MasterAckErr);
                 }
             },
             State::AwaitingLen => {
                 if word > 16 {
                     log::warn!("got slave response with len > 16");
-                    self.reset();
+                    self.reset_wait_syn();
                     // TODO: how to handle?
                     sleep(Duration::from_millis(10));
                 }
@@ -243,6 +273,80 @@ impl EbusDriver {
                     return Ok(ProcessResult::CrcError);
                 }
             }
+            State::GotSrc { src } => {
+                self.state = State::GotDst {
+                    src: *src,
+                    dst: word,
+                }
+            }
+            State::GotDst { src, dst } => {
+                self.state = State::GotSvc1 {
+                    src: *src,
+                    dst: *dst,
+                    svc1: word,
+                }
+            }
+            State::GotSvc1 { src, dst, svc1 } => {
+                self.state = State::GotSvc2 {
+                    src: *src,
+                    dst: *dst,
+                    svc: u16::from_le_bytes([*svc1, word]),
+                }
+            }
+            State::GotSvc2 { src, dst, svc } => {
+                self.state = State::GettingBytes {
+                    src: *src,
+                    dst: *dst,
+                    svc: *svc,
+                    len: word,
+                    cursor: 0,
+                    buf: [0; 16],
+                }
+            }
+            State::GettingBytes {
+                src,
+                dst,
+                svc,
+                len,
+                cursor,
+                buf,
+            } => {
+                buf[*cursor as usize] = word;
+                *cursor += 1;
+
+                if *cursor >= *len {
+                    let res = ProcessResult::Request {
+                        telegram: Telegram {
+                            src: *src,
+                            dest: *dst,
+                            service: *svc,
+                            data: Buffer::from_parts(*buf, *len),
+                        },
+                        token: RequestToken { _priv: () },
+                    };
+                    self.state = State::GotTelegram;
+                    return Ok(res);
+                }
+            }
+            State::GotTelegram => {
+                // TODO: could sniff here
+                self.state = State::Start;
+            }
+            State::Replied => match word {
+                ACK_OK => {
+                    self.reset_wait_syn();
+                    return Ok(ProcessResult::SlaveAckOk);
+                }
+                x => {
+                    log::warn!("reply not acknowledged");
+                    if x != ACK_ERR {
+                        log::warn!("expected ack, got non-ack byte: 0x{word:X}");
+                    }
+                    self.reset_wait_syn();
+
+                    return Ok(ProcessResult::SlaveAckErr);
+                }
+            },
         }
 
         Ok(ProcessResult::None)
@@ -251,21 +355,26 @@ impl EbusDriver {
     fn send_data<T: Transmit>(
         &mut self,
         transmit: &mut T,
-        msg: &Telegram<'_>,
+        msg: &MasterTelegram,
     ) -> Result<u8, T::Error> {
         let mut tele_crc = Crc::new(self.crc_poly_telegram);
-        tele_crc.add(msg.src);
+        tele_crc.add(msg.telegram.src);
         let mut counter = 0;
 
-        let svc = msg.service.to_le_bytes();
-        let data = msg.data;
+        let svc = msg.telegram.service.to_le_bytes();
+        let data = msg.telegram.data.as_bytes();
         let len = data.len() as u8;
         counter += transmit.transmit_encode_with_crc(
-            &[msg.dest, svc[0], svc[1], len + msg.needs_data_crc as u8],
+            &[
+                msg.telegram.dest,
+                svc[0],
+                svc[1],
+                len + (msg.flags & TelegramFlag::NeedsDataCrc) as u8,
+            ],
             &mut tele_crc,
         )?;
         // TODO: how to handle empty data?
-        if msg.needs_data_crc {
+        if msg.flags & TelegramFlag::NeedsDataCrc {
             let mut data_crc = Crc::new(self.crc_poly_data);
             // TODO: do we have to use encoded bytes here?
             data_crc.add_multiple(data);
@@ -285,20 +394,31 @@ impl EbusDriver {
     fn success<T: Transmit>(&mut self, transmit: &mut T) -> Result<(), T::Error> {
         transmit.transmit_syn()?;
         self.flags.clear();
-        self.state.reset();
+        // we do not reset to syn state, because we wait until we receive it back
+        self.state.reset_unknown();
         self.fairness_counter = FAIRNESS_MAX;
 
         Ok(())
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset_wait_syn(&mut self) {
         self.flags.clear();
-        self.state.reset();
+        self.state.reset_unknown();
+    }
+
+    /// this should be called if we receive SYN
+    pub fn reset_syn(&mut self) {
+        self.flags.clear();
+        self.state.reset_syn();
     }
 }
 
 enum State {
-    Idle,
+    /// We are waiting for next SYN
+    Unknown,
+    /// We just got SYN
+    Start,
+    // === master states ===
     AcquiringLock,
     DataLoopback {
         /// the number of bytes we expect to get echoed back (is counted down)
@@ -317,22 +437,52 @@ enum State {
         buf: [u8; 16],
         len: u8,
     },
+    // === slave states ===
+    GotSrc {
+        src: u8,
+    },
+    GotDst {
+        src: u8,
+        dst: u8,
+    },
+    GotSvc1 {
+        src: u8,
+        dst: u8,
+        svc1: u8,
+    },
+    GotSvc2 {
+        src: u8,
+        dst: u8,
+        svc: u16,
+    },
+    GettingBytes {
+        src: u8,
+        dst: u8,
+        svc: u16,
+        len: u8,
+        cursor: u8,
+        buf: [u8; 16],
+    },
+    /// The master half of master-slave was received.
+    GotTelegram,
+    /// We are waiting to get ACK back.
+    Replied,
 }
 
 impl State {
     pub fn has_bus_lock(&self) -> bool {
-        !matches!(self, State::Idle)
+        !matches!(self, State::Start)
     }
 
     pub fn is_idle(&self) -> bool {
-        matches!(self, State::Idle)
+        matches!(self, State::Start)
     }
 
     pub fn is_acquiring(&self) -> bool {
         matches!(self, State::AcquiringLock)
     }
 
-    pub fn is_awaiting(&self) -> bool {
+    pub fn master_is_awaiting(&self) -> bool {
         matches!(
             self,
             Self::AwaitingAck
@@ -342,19 +492,45 @@ impl State {
         )
     }
 
-    pub fn reset(&mut self) {
-        *self = State::Idle;
+    pub fn reset_unknown(&mut self) {
+        *self = State::Unknown;
+    }
+
+    pub fn reset_syn(&mut self) {
+        *self = State::Start;
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum ProcessResult {
     None,
-    AckOk,
-    AckErr,
+    /// We replied as slave, master acknowledged
+    SlaveAckOk,
+    /// We replied as slave, master did not acknowledge
+    SlaveAckErr,
+    /// We sent master-slave, slave acknowledged
+    MasterAckOk,
+    /// We sent master-slave, slave did not acknowledge
+    MasterAckErr,
+    /// Expected recipient to send, but AUTO-SYN occurred
     Timeout,
+    /// CRC check of reply failed
     CrcError,
-    Reply { buf: [u8; 16], len: u8 },
+    /// Master-slave request
+    Request {
+        telegram: Telegram,
+        token: RequestToken,
+    },
+    /// Slave sent reply
+    Reply {
+        buf: [u8; 16],
+        len: u8,
+    },
+}
+
+#[derive(Debug)]
+pub struct RequestToken {
+    _priv: (),
 }
 
 #[derive(Clone, Debug, Default)]

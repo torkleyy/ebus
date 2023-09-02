@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use energy_bus::{EbusDriver, ProcessResult, Telegram, Transmit};
+use energy_bus::{
+    Buffer, EbusDriver, MasterTelegram, ProcessResult, Telegram, TelegramFlag, Transmit,
+};
 
 struct TestTransmitter {
     sent: Vec<u8>,
@@ -21,13 +23,14 @@ fn sleep(_: Duration) {}
 #[test]
 fn test_example1() {
     let mut transmitter = TestTransmitter { sent: vec![] };
-    let msg = Telegram {
-        src: 0xFF,
-        dest: 0x51,
-        service: 0x5022,
-        data: &[15, 0],
-        needs_data_crc: true,
-        expect_reply: true,
+    let msg = MasterTelegram {
+        telegram: Telegram {
+            src: 0xFF,
+            dest: 0x51,
+            service: 0x5022,
+            data: Buffer::from_slice(&[15, 0]),
+        },
+        flags: TelegramFlag::NeedsDataCrc | TelegramFlag::ExpectReply,
     };
 
     let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
@@ -73,13 +76,14 @@ fn test_example1() {
 #[test]
 fn test_example1_timeout() {
     let mut transmitter = TestTransmitter { sent: vec![] };
-    let msg = Telegram {
-        src: 0xFF,
-        dest: 0x51,
-        service: 0x5022,
-        data: &[15, 0],
-        needs_data_crc: true,
-        expect_reply: true,
+    let msg = MasterTelegram {
+        telegram: Telegram {
+            src: 0xFF,
+            dest: 0x51,
+            service: 0x5022,
+            data: Buffer::from_slice(&[15, 0]),
+        },
+        flags: TelegramFlag::NeedsDataCrc | TelegramFlag::ExpectReply,
     };
 
     let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);

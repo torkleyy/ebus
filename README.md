@@ -9,15 +9,20 @@ Software driver for [eBUS] (energy bus) written in Rust.
 [eBUS]: https://ebus-wiki.org/lib/exe/fetch.php/ebus/spec_prot_12_v1_3_1_e.pdf
 
 * `no-std`
-* zero dependencies (except optional `log`)
+* few dependencies:
+    * [`log`] (optional)
+
+[`heapless`]: https://github.com/japaric/heapless
+[`log`]: https://github.com/rust-lang/log
 
 ## Features
 
 * [x] Lightweight API allowing for different execution models
 * [x] Priority-based collision resolution
 * [x] Sending Master-Slave telegram
-* [ ] Receiving Master-Slave telegram
-* [ ] Master-Master
+* [x] Receiving Master-Slave telegram
+* [x] Master-Master
+* [ ] Sniffing
 * [ ] Broadcast
 
 ## Integration

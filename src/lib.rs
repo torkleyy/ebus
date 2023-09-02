@@ -22,7 +22,7 @@ const ACK_OK: u8 = 0x00;
 const ACK_ERR: u8 = 0xFF;
 const ESCAPE_PREFIX: u8 = 0xA9;
 
-pub const FAIRNESS_MAX: u8 = 50;
+const FAIRNESS_MAX: u8 = 50;
 
 pub struct EbusDriver {
     crc_poly_telegram: u8,
@@ -288,7 +288,7 @@ impl EbusDriver {
     }
 }
 
-pub enum State {
+enum State {
     Idle,
     AcquiringLock,
     DataLoopback {
@@ -349,7 +349,7 @@ pub enum ProcessResult {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Flags {
+struct Flags {
     pub flags: u8,
 }
 
@@ -380,7 +380,7 @@ impl Flags {
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
-pub enum Flag {
+enum Flag {
     /// Last byte we received was 0x9F prefix
     WasEscapePrefix = 0,
 }

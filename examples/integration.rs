@@ -96,9 +96,9 @@ fn main() {
                     }
                 }
             }
-            energy_bus::ProcessResult::Reply { buf, len } => {
+            energy_bus::ProcessResult::Reply { data } => {
                 // success
-                dbg!((buf, len));
+                dbg!(data);
                 msg = None; // remove message from queue
             }
             energy_bus::ProcessResult::SlaveAckOk => {

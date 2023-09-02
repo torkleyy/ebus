@@ -85,6 +85,12 @@ impl ops::BitOr<TelegramFlags> for TelegramFlag {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TelegramFlags(u8);
 
+impl TelegramFlags {
+    pub fn none() -> Self {
+        TelegramFlags(0)
+    }
+}
+
 impl ops::BitAnd<TelegramFlag> for TelegramFlags {
     type Output = bool;
 
@@ -98,5 +104,29 @@ impl ops::BitOr<TelegramFlag> for TelegramFlags {
 
     fn bitor(self, rhs: TelegramFlag) -> Self::Output {
         TelegramFlags(self.0 | 1 << rhs as u8)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{TelegramFlag, TelegramFlags};
+
+    #[test]
+    fn test_bitor() {
+        let flags = TelegramFlag::ExpectReply | TelegramFlag::NeedsDataCrc;
+        assert_eq!(flags.0, 0x3);
+    }
+
+    #[test]
+    fn test_bitor2() {
+        let mut flags = TelegramFlag::ExpectReply | TelegramFlag::NeedsDataCrc;
+        flags = flags | TelegramFlag::ExpectReply;
+        assert_eq!(flags.0, 0x3);
+    }
+
+    #[test]
+    fn test_bitor3() {
+        let flags = TelegramFlag::ExpectReply | TelegramFlags::none();
+        assert_eq!(flags.0, 0x2);
     }
 }

@@ -256,8 +256,7 @@ impl EbusDriver {
                     transmit.transmit_raw(&[ACK_OK])?;
                     sleep(Duration::from_millis(15));
                     let res = ProcessResult::Reply {
-                        buf: *buf,
-                        len: *len,
+                        data: Buffer::from_parts(*buf, *len),
                     };
                     self.success(transmit)?;
 
@@ -327,7 +326,7 @@ impl EbusDriver {
             }
             State::GotTelegram => {
                 // TODO: could sniff here
-                self.state = State::Start;
+                self.state = State::Unknown;
             }
             State::Replied => match word {
                 ACK_OK => {
@@ -344,6 +343,7 @@ impl EbusDriver {
                     return Ok(ProcessResult::SlaveAckErr);
                 }
             },
+            State::ReplyLoopback { expect } => todo!(),
         }
 
         Ok(ProcessResult::None)
@@ -463,6 +463,11 @@ enum State {
     /// The master half of master-slave was received.
     GotTelegram,
     /// We are waiting to get ACK back.
+    ReplyLoopback {
+        /// the number of bytes we expect to get echoed back (is counted down)
+        expect: u8,
+    },
+    /// We are waiting to get ACK back.
     Replied,
 }
 
@@ -520,9 +525,30 @@ pub enum ProcessResult {
     },
     /// Slave sent reply
     Reply {
-        buf: [u8; 16],
-        len: u8,
+        data: Buffer,
     },
+}
+
+impl ProcessResult {
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    pub fn as_request(&self) -> Option<&Telegram> {
+        if let Self::Request { telegram, .. } = self {
+            Some(telegram)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_reply(&self) -> Option<&[u8]> {
+        if let Self::Reply { data } = self {
+            Some(data.as_bytes())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug)]

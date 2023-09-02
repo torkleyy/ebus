@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FAIRNESS_MAX"],"enum":["Flag","ProcessResult","State"],"struct":["Crc","EbusDriver","Flags","Telegram"],"trait":["Transmit"]};

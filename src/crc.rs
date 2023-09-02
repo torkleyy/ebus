@@ -42,6 +42,27 @@ impl Crc {
         self
     }
 
+    pub fn add_decoded(&mut self, bytes: &[u8]) -> &mut Self {
+        for byte in bytes {
+            log::debug!("add_decoded 0x{byte:X}");
+            match byte {
+                0xA9 => {
+                    self.add(0xA9);
+                    self.add(0x00);
+                }
+                0xAA => {
+                    self.add(0xA9);
+                    self.add(0x01);
+                }
+                byte => {
+                    self.add(*byte);
+                }
+            }
+        }
+
+        self
+    }
+
     pub fn calc_crc(&self) -> u8 {
         self.crc
     }

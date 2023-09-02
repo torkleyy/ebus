@@ -74,8 +74,13 @@ fn main() {
                 msg = None; // remove message from queue
                             // could also try to requeue this message for later
             }
-            energy_bus::ProcessResult::CrcError => {
+            energy_bus::ProcessResult::ReplyCrcError => {
                 // recipient sent reply but CRC check failed
+                msg = None; // remove message from queue
+                            // could also try to requeue this message for later
+            }
+            energy_bus::ProcessResult::TelegramCrcError => {
+                // some master sent telegram but CRC check failed
                 msg = None; // remove message from queue
                             // could also try to requeue this message for later
             }

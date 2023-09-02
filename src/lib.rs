@@ -56,6 +56,17 @@ impl EbusDriver {
         sleep: impl Fn(Duration),
         next_msg: Option<&MasterTelegram>,
     ) -> Result<ProcessResult, T::Error> {
+        /*
+         * High level description of how the code is structured:
+         *
+         * `process` tries to handle the time critical case as fast as possible:
+         * sending our source address after a SYN (if we are allowd to send and there is a msg in queue)
+         *
+         * The locking of the bus will always be started from within this function.
+         * `process_slow` will then handle the rest. Depending on whether we locked the bus or not,
+         * it will either write the message to the bus or just read along.
+         */
+
         if word == SYN {
             let was_timeout = self.state.master_is_awaiting();
 
@@ -77,13 +88,8 @@ impl EbusDriver {
             } else {
                 Ok(ProcessResult::None)
             }
-        } else if self.state.is_start() {
-            // do nothing
-            Ok(ProcessResult::None)
         } else {
-            // we are not in idle state, there must be a msg
-            let msg = next_msg.unwrap();
-            self.process_slow(word, transmit, sleep, msg)
+            self.process_slow(word, transmit, sleep, next_msg)
         }
     }
 
@@ -98,13 +104,14 @@ impl EbusDriver {
             log::warn!("replying with more than 16 bytes");
         }
 
-        transmit.transmit_encode(&[ACK_OK, data.len() as u8])?;
+        let mut counter = 0;
+        counter += transmit.transmit_encode(&[ACK_OK, data.len() as u8])?;
 
         let mut crc = Crc::new(self.crc_poly_telegram);
-        transmit.transmit_encode_with_crc(data, &mut crc)?;
-        transmit.transmit_encode(&[crc.calc_crc()])?;
+        counter += transmit.transmit_encode_with_crc(data, &mut crc)?;
+        counter += transmit.transmit_encode(&[crc.calc_crc()])?;
 
-        self.state = State::Replied;
+        self.state = State::ReplyLoopback { expect: counter };
 
         Ok(())
     }
@@ -134,10 +141,10 @@ impl EbusDriver {
         mut word: u8,
         transmit: &mut T,
         sleep: impl Fn(Duration),
-        msg: &MasterTelegram,
+        msg: Option<&MasterTelegram>,
     ) -> Result<ProcessResult, T::Error> {
         // ugly: we have to build the crc for response before converting escape sequences
-        if let State::ReceivingData { crc, .. } = &mut self.state {
+        if let State::ReceivingReply { crc, .. } = &mut self.state {
             crc.add(word);
         }
 
@@ -166,6 +173,7 @@ impl EbusDriver {
                 self.state = State::GotSrc { src: word };
             }
             State::AcquiringLock => {
+                let msg = msg.unwrap();
                 if word == msg.telegram.src {
                     let expect = self.send_data(transmit, msg)?;
                     self.state = State::DataLoopback { expect };
@@ -194,6 +202,7 @@ impl EbusDriver {
             }
             State::AwaitingAck => match word {
                 ACK_OK => {
+                    let msg = msg.unwrap();
                     if msg.flags & TelegramFlag::ExpectReply {
                         self.state = State::AwaitingLen;
                     } else {
@@ -225,14 +234,14 @@ impl EbusDriver {
                 let mut crc = Crc::new(self.crc_poly_telegram);
                 crc.add(word);
 
-                self.state = State::ReceivingData {
+                self.state = State::ReceivingReply {
                     buf: [0; 16],
                     cursor: 0,
                     total: word,
                     crc,
                 };
             }
-            State::ReceivingData {
+            State::ReceivingReply {
                 buf,
                 cursor,
                 total,
@@ -266,7 +275,7 @@ impl EbusDriver {
                     transmit.transmit_raw(&[ACK_ERR])?;
                     sleep(Duration::from_millis(15));
                     self.success(transmit)?;
-                    return Ok(ProcessResult::CrcError);
+                    return Ok(ProcessResult::ReplyCrcError);
                 }
             }
             State::GotSrc { src } => {
@@ -290,7 +299,7 @@ impl EbusDriver {
                 }
             }
             State::GotSvc2 { src, dst, svc } => {
-                self.state = State::GettingBytes {
+                self.state = State::ReceivingTelegram {
                     src: *src,
                     dst: *dst,
                     svc: *svc,
@@ -299,7 +308,7 @@ impl EbusDriver {
                     buf: [0; 16],
                 }
             }
-            State::GettingBytes {
+            State::ReceivingTelegram {
                 src,
                 dst,
                 svc,
@@ -307,10 +316,36 @@ impl EbusDriver {
                 cursor,
                 buf,
             } => {
+                log::debug!("recv 0x{word:X}");
+
                 buf[*cursor as usize] = word;
                 *cursor += 1;
 
                 if *cursor >= *len {
+                    self.state = State::ReceivingTelegramCrc {
+                        src: *src,
+                        dst: *dst,
+                        svc: *svc,
+                        len: *len,
+                        buf: *buf,
+                        crc: Crc::new(self.crc_poly_telegram)
+                            .add_decoded(&[*src, *dst])
+                            .add_decoded(&svc.to_le_bytes())
+                            .add_decoded(&[*len])
+                            .add_decoded(&buf[..*len as usize])
+                            .calc_crc(),
+                    }
+                }
+            }
+            State::ReceivingTelegramCrc {
+                src,
+                dst,
+                svc,
+                len,
+                buf,
+                crc,
+            } => {
+                if *crc == word {
                     let res = ProcessResult::Request {
                         telegram: Telegram {
                             src: *src,
@@ -322,11 +357,22 @@ impl EbusDriver {
                     };
                     self.state = State::GotTelegram;
                     return Ok(res);
+                } else {
+                    log::warn!("crc verification of telegram from 0x{src:X} failed: expected 0x{crc:X}, got 0x{word:X}");
+                    return Ok(ProcessResult::TelegramCrcError);
                 }
             }
             State::GotTelegram => {
+                log::debug!("0x{word:X}");
+                // we would have switched into ReplyLoopback if we sent a reply
                 // TODO: could sniff here
                 self.state = State::Unknown;
+            }
+            State::ReplyLoopback { expect } => {
+                *expect -= 1;
+                if *expect == 0 {
+                    self.state = State::Replied;
+                }
             }
             State::Replied => match word {
                 ACK_OK => {
@@ -343,7 +389,6 @@ impl EbusDriver {
                     return Ok(ProcessResult::SlaveAckErr);
                 }
             },
-            State::ReplyLoopback { expect } => todo!(),
         }
 
         Ok(ProcessResult::None)
@@ -423,7 +468,7 @@ enum State {
     },
     AwaitingAck,
     AwaitingLen,
-    ReceivingData {
+    ReceivingReply {
         buf: [u8; 16],
         cursor: u8,
         total: u8,
@@ -452,13 +497,21 @@ enum State {
         dst: u8,
         svc: u16,
     },
-    GettingBytes {
+    ReceivingTelegram {
         src: u8,
         dst: u8,
         svc: u16,
         len: u8,
         cursor: u8,
         buf: [u8; 16],
+    },
+    ReceivingTelegramCrc {
+        src: u8,
+        dst: u8,
+        svc: u16,
+        len: u8,
+        buf: [u8; 16],
+        crc: u8,
     },
     /// The master half of master-slave was received.
     GotTelegram,
@@ -476,10 +529,6 @@ impl State {
         !matches!(self, State::Start)
     }
 
-    pub fn is_start(&self) -> bool {
-        matches!(self, State::Start)
-    }
-
     pub fn is_acquiring(&self) -> bool {
         matches!(self, State::AcquiringLock)
     }
@@ -490,7 +539,7 @@ impl State {
             Self::AwaitingAck
                 | Self::AwaitingCrc { .. }
                 | Self::AwaitingLen
-                | Self::ReceivingData { .. }
+                | Self::ReceivingReply { .. }
         )
     }
 
@@ -516,8 +565,10 @@ pub enum ProcessResult {
     MasterAckErr,
     /// Expected recipient to send, but AUTO-SYN occurred
     Timeout,
-    /// CRC check of reply failed
-    CrcError,
+    /// CRC check of telegram failed (sent by another master)
+    TelegramCrcError,
+    /// CRC check of reply failed (sent by another slave)
+    ReplyCrcError,
     /// Master-slave request
     Request {
         telegram: Telegram,

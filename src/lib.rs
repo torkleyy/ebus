@@ -98,6 +98,7 @@ impl EbusDriver {
         &mut self,
         data: &[u8],
         transmit: &mut T,
+        sleep: impl Fn(Duration),
         _token: RequestToken,
     ) -> Result<(), T::Error> {
         if data.len() > 16 {
@@ -112,6 +113,8 @@ impl EbusDriver {
         counter += transmit.transmit_encode(&[crc.calc_crc()])?;
 
         self.state = State::ReplyLoopback { expect: counter };
+
+        sleep(Duration::from_millis(20));
 
         Ok(())
     }
@@ -172,6 +175,7 @@ impl EbusDriver {
                 // we are not acquiring the lock, so we just listen
                 self.state = State::GotSrc { src: word };
             }
+            // === master states ===
             State::AcquiringLock => {
                 let msg = msg.unwrap();
                 if word == msg.telegram.src {
@@ -278,25 +282,29 @@ impl EbusDriver {
                     return Ok(ProcessResult::ReplyCrcError);
                 }
             }
+            // === slave states ===
             State::GotSrc { src } => {
                 self.state = State::GotDst {
                     src: *src,
                     dst: word,
-                }
+                };
+                sleep(Duration::from_millis(10));
             }
             State::GotDst { src, dst } => {
                 self.state = State::GotSvc1 {
                     src: *src,
                     dst: *dst,
                     svc1: word,
-                }
+                };
+                sleep(Duration::from_millis(10));
             }
             State::GotSvc1 { src, dst, svc1 } => {
                 self.state = State::GotSvc2 {
                     src: *src,
                     dst: *dst,
                     svc: u16::from_le_bytes([*svc1, word]),
-                }
+                };
+                sleep(Duration::from_millis(10));
             }
             State::GotSvc2 { src, dst, svc } => {
                 self.state = State::ReceivingTelegram {
@@ -306,7 +314,8 @@ impl EbusDriver {
                     len: word,
                     cursor: 0,
                     buf: [0; 16],
-                }
+                };
+                sleep(Duration::from_millis(10));
             }
             State::ReceivingTelegram {
                 src,
@@ -316,8 +325,6 @@ impl EbusDriver {
                 cursor,
                 buf,
             } => {
-                log::debug!("recv 0x{word:X}");
-
                 buf[*cursor as usize] = word;
                 *cursor += 1;
 
@@ -363,7 +370,6 @@ impl EbusDriver {
                 }
             }
             State::GotTelegram => {
-                log::debug!("0x{word:X}");
                 // we would have switched into ReplyLoopback if we sent a reply
                 // TODO: could sniff here
                 self.state = State::Unknown;

@@ -93,7 +93,7 @@ fn main() {
                     0x04 => {
                         // this is meant for us, reply
                         driver
-                            .reply_as_slave(&[0xDE, 0xAD, 0xBE, 0xEF], &mut uart, token)
+                            .reply_as_slave(&[0xDE, 0xAD, 0xBE, 0xEF], &mut uart, sleep, token)
                             .unwrap();
                     }
                     _ => {

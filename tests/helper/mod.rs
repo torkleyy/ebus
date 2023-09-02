@@ -136,7 +136,7 @@ impl AutoLoopback {
 
     pub fn reply_as_slave(&mut self, data: &[u8], token: RequestToken) {
         self.driver
-            .reply_as_slave(data, &mut self.transmit, token)
+            .reply_as_slave(data, &mut self.transmit, sleep, token)
             .unwrap();
     }
 }

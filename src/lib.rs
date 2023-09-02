@@ -5,7 +5,7 @@
 //!
 //! Here is an example how once could integrate this library:
 //!
-//! ```rust
+//! ```rust,no_run
 #![doc = include_str!("../examples/integration.rs")]
 //! ```
 

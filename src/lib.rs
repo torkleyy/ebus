@@ -1,4 +1,13 @@
 #![no_std]
+#![doc = include_str!("../README.md")]
+//!
+//! ---
+//!
+//! Here is an example how once could integrate this library:
+//!
+//! ```rust
+#![doc = include_str!("../examples/integration.rs")]
+//! ```
 
 use core::{fmt::Debug, time::Duration};
 

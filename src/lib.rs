@@ -102,6 +102,7 @@ impl EbusDriver {
         _token: RequestToken,
     ) -> Result<(), T::Error> {
         if data.len() > 16 {
+            #[cfg(feature = "log")]
             log::warn!("replying with more than 16 bytes");
         }
 
@@ -122,9 +123,11 @@ impl EbusDriver {
     /// Returns `true` if we may lock the bus
     fn process_syn(&mut self) -> bool {
         if self.state.has_bus_lock() {
+            #[cfg(feature = "log")]
             log::warn!("unexpected SYN while holding bus lock");
             self.reset_syn();
         } else if self.state.is_acquiring() {
+            #[cfg(feature = "log")]
             log::warn!("unexpected double SYN prevented lock");
             self.reset_syn();
         } else if self.is_allowed_to_lock() {
@@ -157,6 +160,7 @@ impl EbusDriver {
             } else if word == 0x01 {
                 word = SYN;
             } else {
+                #[cfg(feature = "log")]
                 log::warn!("detected invalid escape sequence");
                 self.reset_wait_syn();
 
@@ -190,6 +194,7 @@ impl EbusDriver {
                         // instantly try again on next SYN
                         self.state = State::Unknown;
                     } else {
+                        #[cfg(feature = "log")]
                         log::warn!("Failed to acquire lock");
                         self.fairness_counter = 2;
                         sleep(Duration::from_millis(20));
@@ -216,8 +221,10 @@ impl EbusDriver {
                     }
                 }
                 x => {
+                    #[cfg(feature = "log")]
                     log::warn!("telegram not acknowledged");
                     if x != ACK_ERR {
+                        #[cfg(feature = "log")]
                         log::warn!("expected ack, got non-ack byte: 0x{word:X}");
                     }
                     self.reset_wait_syn();
@@ -227,6 +234,7 @@ impl EbusDriver {
             },
             State::AwaitingLen => {
                 if word > 16 {
+                    #[cfg(feature = "log")]
                     log::warn!("got slave response with len > 16");
                     self.reset_wait_syn();
                     // TODO: how to handle?
@@ -275,6 +283,7 @@ impl EbusDriver {
 
                     return Ok(res);
                 } else {
+                    #[cfg(feature = "log")]
                     log::warn!("got crc 0x{word:X}, expected 0x{crc_should:X}");
                     transmit.transmit_raw(&[ACK_ERR])?;
                     sleep(Duration::from_millis(15));
@@ -365,6 +374,7 @@ impl EbusDriver {
                     self.state = State::GotTelegram;
                     return Ok(res);
                 } else {
+                    #[cfg(feature = "log")]
                     log::warn!("crc verification of telegram from 0x{src:X} failed: expected 0x{crc:X}, got 0x{word:X}");
                     return Ok(ProcessResult::TelegramCrcError);
                 }
@@ -386,8 +396,10 @@ impl EbusDriver {
                     return Ok(ProcessResult::SlaveAckOk);
                 }
                 x => {
+                    #[cfg(feature = "log")]
                     log::warn!("reply not acknowledged");
                     if x != ACK_ERR {
+                        #[cfg(feature = "log")]
                         log::warn!("expected ack, got non-ack byte: 0x{word:X}");
                     }
                     self.reset_wait_syn();

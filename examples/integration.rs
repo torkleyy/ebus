@@ -1,4 +1,4 @@
-use std::time::Duration;
+use core::time::Duration;
 
 use energy_bus::{EbusDriver, MasterTelegram, Transmit};
 
@@ -40,8 +40,14 @@ fn sleep(_d: Duration) {
     // bus arbitration. It could be necessary to busy loop for microsecond sleeps.
 }
 
+fn poll_next_msg() -> Option<MasterTelegram> {
+    // poll your message queue here
+    None
+}
+
 fn main() {
-    let (_tx, rx) = std::sync::mpsc::channel::<MasterTelegram>();
+    // create some sort of queue for messages to be sent,
+    // or a channel
     // give tx to application so it can queue messages
 
     let mut uart = Transmitter(UartTxDriver);
@@ -52,7 +58,7 @@ fn main() {
         // Here, we block on the receival of a byte which is not ideal.
         // Depending on your device and architecture, you should use interrupts or
         // low latency async code.
-        msg = msg.or_else(|| rx.try_recv().ok());
+        msg = msg.or_else(|| poll_next_msg());
         let byte = wait_for_next_byte();
 
         match driver
@@ -101,9 +107,8 @@ fn main() {
                     }
                 }
             }
-            energy_bus::ProcessResult::Reply { data } => {
+            energy_bus::ProcessResult::Reply { data: _ } => {
                 // success
-                dbg!(data);
                 msg = None; // remove message from queue
             }
             energy_bus::ProcessResult::SlaveAckOk => {

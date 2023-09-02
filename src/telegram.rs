@@ -36,7 +36,7 @@ impl Buffer {
     #[inline]
     pub fn from_slice(bytes: &[u8]) -> Self {
         let mut data = [0; 16];
-        data.copy_from_slice(bytes);
+        data[..bytes.len()].copy_from_slice(bytes);
 
         Buffer {
             data,

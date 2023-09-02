@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["crc","energy_bus","log"];
+window.ALL_CRATES = ["energy_bus","log"];

@@ -543,11 +543,11 @@ impl State {
     pub fn has_bus_lock(&self) -> bool {
         !matches!(
             self,
-            DataLoopback { .. },
-            AwaitingAck,
-            AwaitingLen,
-            ReceivingReply { .. },
-            AwaitingCrc { .. },
+            State::DataLoopback { .. }
+                | State::AwaitingAck
+                | State::AwaitingLen
+                | State::ReceivingReply { .. }
+                | State::AwaitingCrc { .. }
         )
     }
 

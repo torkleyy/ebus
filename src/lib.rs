@@ -108,9 +108,9 @@ impl EbusDriver {
         transmit: &mut T,
         _token: RequestToken,
     ) -> Result<(), T::Error> {
-        if data.len() > 16 {
+        if data.len() > 32 {
             #[cfg(feature = "log")]
-            log::warn!("replying with more than 16 bytes");
+            log::warn!("replying with more than 32 bytes");
         }
 
         let mut counter = 0;
@@ -234,9 +234,9 @@ impl EbusDriver {
                 }
             },
             State::AwaitingLen => {
-                if word > 16 {
+                if word > 32 {
                     #[cfg(feature = "log")]
-                    log::warn!("got slave response with len > 16");
+                    log::warn!("got slave response with len > 32");
                     self.reset_wait_syn();
                     // TODO: how to handle?
                 }
@@ -247,7 +247,7 @@ impl EbusDriver {
                 crc.add(word);
 
                 self.state = State::ReceivingReply {
-                    buf: [0; 16],
+                    buf: [0; 32],
                     cursor: 0,
                     total: word,
                     crc,
@@ -317,7 +317,7 @@ impl EbusDriver {
                     svc: *svc,
                     len: word,
                     cursor: 0,
-                    buf: [0; 16],
+                    buf: [0; 32],
                 };
             }
             State::ReceivingTelegram {
@@ -481,14 +481,14 @@ enum State {
     AwaitingAck,
     AwaitingLen,
     ReceivingReply {
-        buf: [u8; 16],
+        buf: [u8; 32],
         cursor: u8,
         total: u8,
         crc: Crc,
     },
     AwaitingCrc {
         crc: u8,
-        buf: [u8; 16],
+        buf: [u8; 32],
         len: u8,
     },
     // === slave states ===
@@ -515,14 +515,14 @@ enum State {
         svc: u16,
         len: u8,
         cursor: u8,
-        buf: [u8; 16],
+        buf: [u8; 32],
     },
     ReceivingTelegramCrc {
         src: u8,
         dst: u8,
         svc: u16,
         len: u8,
-        buf: [u8; 16],
+        buf: [u8; 32],
         crc: u8,
     },
     /// The master half of master-slave was received.

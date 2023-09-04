@@ -17,25 +17,25 @@ pub struct Telegram {
     pub dest: u8,
     /// Service command, encoded LSB first
     pub service: u16,
-    /// Up to 16 data bytes
+    /// Up to 32 data bytes
     pub data: Buffer,
 }
 
 #[derive(Clone, Debug)]
 pub struct Buffer {
-    data: [u8; 16],
+    data: [u8; 32],
     len: u8,
 }
 
 impl Buffer {
-    /// Create `Buffer` from byte slice with at most 16 elements.
+    /// Create `Buffer` from byte slice with at most 32 elements.
     ///
     /// ## Panics
     ///
-    /// Panics if `bytes.len() > 16`
+    /// Panics if `bytes.len() > 32`
     #[inline]
     pub fn from_slice(bytes: &[u8]) -> Self {
-        let mut data = [0; 16];
+        let mut data = [0; 32];
         data[..bytes.len()].copy_from_slice(bytes);
 
         Buffer {
@@ -44,7 +44,7 @@ impl Buffer {
         }
     }
 
-    pub const fn from_parts(data: [u8; 16], len: u8) -> Self {
+    pub const fn from_parts(data: [u8; 32], len: u8) -> Self {
         Buffer { data, len }
     }
 

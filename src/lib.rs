@@ -17,7 +17,7 @@ pub use telegram::{Buffer, MasterTelegram, Telegram, TelegramFlag, TelegramFlags
 mod crc;
 mod telegram;
 
-pub const MAX_BUF_U8: usize = MAX_BUF;
+pub const MAX_BUF_U8: u8 = 32;
 pub const MAX_BUF: usize = MAX_BUF_U8 as usize;
 
 const SYN: u8 = 0xAA;
@@ -237,7 +237,7 @@ impl EbusDriver {
                 }
             },
             State::AwaitingLen => {
-                if word > MAX_BUF {
+                if word > MAX_BUF_U8 {
                     #[cfg(feature = "log")]
                     log::warn!("got slave response with len > MAX_BUF");
                     self.reset_wait_syn();

@@ -1,5 +1,7 @@
 use core::ops;
 
+use crate::MAX_BUF;
+
 /// Telegram to be sent
 #[derive(Clone, Debug)]
 pub struct MasterTelegram {

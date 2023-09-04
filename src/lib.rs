@@ -418,7 +418,7 @@ impl EbusDriver {
         tele_crc.add(msg.telegram.src);
         let mut counter = 0;
 
-        let svc = msg.telegram.service.to_le_bytes();
+        let svc = msg.telegram.service.to_be_bytes();
         let data = msg.telegram.data.as_bytes();
         let len = data.len() as u8;
         counter += transmit.transmit_encode_with_crc(

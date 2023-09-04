@@ -314,11 +314,18 @@ impl EbusDriver {
                 };
             }
             State::GotSvc2 { src, dst, svc } => {
+                let mut len = word;
+
+                if len > MAX_BUF_U8 {
+                    log::warn!("Receiving master telegram with len > {MAX_BUF_U8}");
+                    len = MAX_BUF_U8;
+                }
+
                 self.state = State::ReceivingTelegram {
                     src: *src,
                     dst: *dst,
                     svc: *svc,
-                    len: word,
+                    len,
                     cursor: 0,
                     buf: [0; MAX_BUF],
                 };

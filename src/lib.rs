@@ -541,7 +541,7 @@ enum State {
 
 impl State {
     pub fn has_bus_lock(&self) -> bool {
-        !matches!(
+        matches!(
             self,
             State::DataLoopback { .. }
                 | State::AwaitingAck

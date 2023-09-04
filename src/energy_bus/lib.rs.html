@@ -844,9 +844,9 @@
         transmit: <span class="kw-2">&amp;mut </span>T,
         _token: RequestToken,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), T::Error&gt; {
-        <span class="kw">if </span>data.len() &gt; <span class="number">16 </span>{
+        <span class="kw">if </span>data.len() &gt; <span class="number">32 </span>{
             <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-            </span><span class="macro">log::warn!</span>(<span class="string">&quot;replying with more than 16 bytes&quot;</span>);
+            </span><span class="macro">log::warn!</span>(<span class="string">&quot;replying with more than 32 bytes&quot;</span>);
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>counter = <span class="number">0</span>;
@@ -970,9 +970,9 @@
                 }
             },
             State::AwaitingLen =&gt; {
-                <span class="kw">if </span>word &gt; <span class="number">16 </span>{
+                <span class="kw">if </span>word &gt; <span class="number">32 </span>{
                     <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;got slave response with len &gt; 16&quot;</span>);
+                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;got slave response with len &gt; 32&quot;</span>);
                     <span class="self">self</span>.reset_wait_syn();
                     <span class="comment">// TODO: how to handle?
                 </span>}
@@ -983,7 +983,7 @@
                 crc.add(word);
 
                 <span class="self">self</span>.state = State::ReceivingReply {
-                    buf: [<span class="number">0</span>; <span class="number">16</span>],
+                    buf: [<span class="number">0</span>; <span class="number">32</span>],
                     cursor: <span class="number">0</span>,
                     total: word,
                     crc,
@@ -1053,7 +1053,7 @@
                     svc: <span class="kw-2">*</span>svc,
                     len: word,
                     cursor: <span class="number">0</span>,
-                    buf: [<span class="number">0</span>; <span class="number">16</span>],
+                    buf: [<span class="number">0</span>; <span class="number">32</span>],
                 };
             }
             State::ReceivingTelegram {
@@ -1217,14 +1217,14 @@
     AwaitingAck,
     AwaitingLen,
     ReceivingReply {
-        buf: [u8; <span class="number">16</span>],
+        buf: [u8; <span class="number">32</span>],
         cursor: u8,
         total: u8,
         crc: Crc,
     },
     AwaitingCrc {
         crc: u8,
-        buf: [u8; <span class="number">16</span>],
+        buf: [u8; <span class="number">32</span>],
         len: u8,
     },
     <span class="comment">// === slave states ===
@@ -1251,14 +1251,14 @@
         svc: u16,
         len: u8,
         cursor: u8,
-        buf: [u8; <span class="number">16</span>],
+        buf: [u8; <span class="number">32</span>],
     },
     ReceivingTelegramCrc {
         src: u8,
         dst: u8,
         svc: u16,
         len: u8,
-        buf: [u8; <span class="number">16</span>],
+        buf: [u8; <span class="number">32</span>],
         crc: u8,
     },
     <span class="doccomment">/// The master half of master-slave was received.

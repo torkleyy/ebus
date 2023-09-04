@@ -52,10 +52,7 @@ impl EbusDriver {
     /// Indicates whether the next byte needs to be supplied with low (sub-ms) latency
     pub fn is_time_critical(&self) -> bool {
         // return `true` for states where a SYN symbol is likely to arrive soon
-        match self.state {
-            State::Unknown | State::Replied => true,
-            _ => false,
-        }
+        matches!(self.state, State::Unknown | State::Replied)
     }
 
     pub fn process<T: Transmit>(
@@ -77,6 +74,9 @@ impl EbusDriver {
          */
 
         if word == SYN {
+            // cancel all queued transmits
+            transmit.clear_buffer()?;
+
             let was_timeout = self.state.master_is_awaiting();
 
             if self.process_syn() && next_msg.is_some() {
@@ -659,7 +659,11 @@ enum Flag {
 pub trait Transmit {
     type Error: Debug;
 
+    /// Write all bytes to UART / put them into tx buffer.
     fn transmit_raw(&mut self, bytes: &[u8]) -> Result<(), Self::Error>;
+
+    /// Empty the tx buffer so no more bytes get sent.
+    fn clear_buffer(&mut self) -> Result<(), Self::Error>;
 
     fn transmit_syn(&mut self) -> Result<(), Self::Error> {
         self.transmit_raw(&[SYN])

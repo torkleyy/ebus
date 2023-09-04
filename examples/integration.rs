@@ -22,6 +22,12 @@ struct Transmitter(UartTxDriver);
 impl Transmit for Transmitter {
     type Error = ();
 
+    fn clear_buffer(&mut self) -> Result<(), Self::Error> {
+        // clear UART tx buffer
+
+        Ok(())
+    }
+
     fn transmit_raw(&mut self, _bytes: &[u8]) -> Result<(), Self::Error> {
         // write bytes to UART
 

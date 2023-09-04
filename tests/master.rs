@@ -15,6 +15,10 @@ struct TestTransmitter {
 impl Transmit for TestTransmitter {
     type Error = ();
 
+    fn clear_buffer(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
     fn transmit_raw(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
         self.sent.extend_from_slice(bytes);
 

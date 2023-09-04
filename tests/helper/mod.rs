@@ -16,6 +16,10 @@ struct LoopbackTransmitter {
 impl Transmit for LoopbackTransmitter {
     type Error = ();
 
+    fn clear_buffer(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
     fn transmit_raw(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
         self.sent.extend_from_slice(bytes);
         self.loopback.extend_from_slice(bytes);
@@ -136,7 +140,7 @@ impl AutoLoopback {
 
     pub fn reply_as_slave(&mut self, data: &[u8], token: RequestToken) {
         self.driver
-            .reply_as_slave(data, &mut self.transmit, sleep, token)
+            .reply_as_slave(data, &mut self.transmit, token)
             .unwrap();
     }
 }

@@ -25,7 +25,7 @@ const ACK_OK: u8 = 0x00;
 const ACK_ERR: u8 = 0xFF;
 const ESCAPE_PREFIX: u8 = 0xA9;
 
-const FAIRNESS_MAX: u8 = 50;
+const FAIRNESS_MAX: u8 = 8;
 
 pub struct EbusDriver {
     crc_poly_telegram: u8,
@@ -541,7 +541,14 @@ enum State {
 
 impl State {
     pub fn has_bus_lock(&self) -> bool {
-        !matches!(self, State::Start)
+        !matches!(
+            self,
+            DataLoopback { .. },
+            AwaitingAck,
+            AwaitingLen,
+            ReceivingReply { .. },
+            AwaitingCrc { .. },
+        )
     }
 
     pub fn is_acquiring(&self) -> bool {

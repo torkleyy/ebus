@@ -130,7 +130,11 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::ops;
+
+<span class="kw">use </span><span class="kw">crate</span>::MAX_BUF;
 
 <span class="doccomment">/// Telegram to be sent
 </span><span class="attr">#[derive(Clone, Debug)]
@@ -149,25 +153,25 @@
     </span><span class="kw">pub </span>dest: u8,
     <span class="doccomment">/// Service command, encoded LSB first
     </span><span class="kw">pub </span>service: u16,
-    <span class="doccomment">/// Up to 32 data bytes
+    <span class="doccomment">/// Up to MAX_BUF data bytes
     </span><span class="kw">pub </span>data: Buffer,
 }
 
 <span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>Buffer {
-    data: [u8; <span class="number">32</span>],
+    data: [u8; MAX_BUF],
     len: u8,
 }
 
 <span class="kw">impl </span>Buffer {
-    <span class="doccomment">/// Create `Buffer` from byte slice with at most 32 elements.
+    <span class="doccomment">/// Create `Buffer` from byte slice with at most MAX_BUF elements.
     ///
     /// ## Panics
     ///
-    /// Panics if `bytes.len() &gt; 32`
+    /// Panics if `bytes.len() &gt; MAX_BUF`
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>from_slice(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0</span>; <span class="number">32</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0</span>; MAX_BUF];
         data[..bytes.len()].copy_from_slice(bytes);
 
         Buffer {
@@ -176,7 +180,7 @@
         }
     }
 
-    <span class="kw">pub const fn </span>from_parts(data: [u8; <span class="number">32</span>], len: u8) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub const fn </span>from_parts(data: [u8; MAX_BUF], len: u8) -&gt; <span class="self">Self </span>{
         Buffer { data, len }
     }
 

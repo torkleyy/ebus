@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ProcessResult","TelegramFlag"],"struct":["Buffer","Crc","EbusDriver","MasterTelegram","RequestToken","Telegram","TelegramFlags"],"trait":["Transmit"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_BUF","MAX_BUF_U8"],"enum":["ProcessResult","TelegramFlag"],"struct":["Buffer","Crc","EbusDriver","MasterTelegram","RequestToken","Telegram","TelegramFlags"],"trait":["Transmit"]};

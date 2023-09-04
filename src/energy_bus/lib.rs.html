@@ -734,8 +734,6 @@
 <a href="#734" id="734">734</a>
 <a href="#735" id="735">735</a>
 <a href="#736" id="736">736</a>
-<a href="#737" id="737">737</a>
-<a href="#738" id="738">738</a>
 </pre></div><pre class="rust"><code><span class="attr">#![no_std]
 #![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 </span><span class="doccomment">//!
@@ -787,6 +785,12 @@
         }
     }
 
+    <span class="doccomment">/// Indicates whether the next byte needs to be supplied with low (sub-ms) latency
+    </span><span class="kw">pub fn </span>is_time_critical(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="comment">// return `true` for states where a SYN symbol is likely to arrive soon
+        </span><span class="macro">matches!</span>(<span class="self">self</span>.state, State::Unknown | State::Replied)
+    }
+
     <span class="kw">pub fn </span>process&lt;T: Transmit&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         word: u8,
@@ -806,6 +810,9 @@
          */
 
         </span><span class="kw">if </span>word == SYN {
+            <span class="comment">// cancel all queued transmits
+            </span>transmit.clear_buffer()<span class="question-mark">?</span>;
+
             <span class="kw">let </span>was_timeout = <span class="self">self</span>.state.master_is_awaiting();
 
             <span class="kw">if </span><span class="self">self</span>.process_syn() &amp;&amp; next_msg.is_some() {
@@ -818,7 +825,6 @@
                 <span class="self">self</span>.state = State::AcquiringLock;
             } <span class="kw">else </span>{
                 <span class="self">self</span>.flags.remove(Flag::WasEscapePrefix);
-                sleep(Duration::from_millis(<span class="number">10</span>));
             }
 
             <span class="kw">if </span>was_timeout {
@@ -827,7 +833,7 @@
                 <span class="prelude-val">Ok</span>(ProcessResult::None)
             }
         } <span class="kw">else </span>{
-            <span class="self">self</span>.process_slow(word, transmit, sleep, next_msg)
+            <span class="self">self</span>.process_slow(word, transmit, next_msg)
         }
     }
 
@@ -836,7 +842,6 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         data: <span class="kw-2">&amp;</span>[u8],
         transmit: <span class="kw-2">&amp;mut </span>T,
-        sleep: <span class="kw">impl </span>Fn(Duration),
         _token: RequestToken,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), T::Error&gt; {
         <span class="kw">if </span>data.len() &gt; <span class="number">16 </span>{
@@ -852,8 +857,6 @@
         counter += transmit.transmit_encode(<span class="kw-2">&amp;</span>[crc.calc_crc()])<span class="question-mark">?</span>;
 
         <span class="self">self</span>.state = State::ReplyLoopback { expect: counter };
-
-        sleep(Duration::from_millis(<span class="number">20</span>));
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -884,7 +887,6 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         <span class="kw-2">mut </span>word: u8,
         transmit: <span class="kw-2">&amp;mut </span>T,
-        sleep: <span class="kw">impl </span>Fn(Duration),
         msg: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>MasterTelegram&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ProcessResult, T::Error&gt; {
         <span class="comment">// ugly: we have to build the crc for response before converting escape sequences
@@ -923,7 +925,6 @@
                 <span class="kw">if </span>word == msg.telegram.src {
                     <span class="kw">let </span>expect = <span class="self">self</span>.send_data(transmit, msg)<span class="question-mark">?</span>;
                     <span class="self">self</span>.state = State::DataLoopback { expect };
-                    sleep(Duration::from_millis(<span class="number">10</span>));
                 } <span class="kw">else </span>{
                     <span class="kw">let </span>prio_class = word &amp; <span class="number">0x0F</span>;
                     <span class="kw">let </span>own_prio = msg.telegram.src &amp; <span class="number">0x0F</span>;
@@ -935,7 +936,6 @@
                         <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
                         </span><span class="macro">log::warn!</span>(<span class="string">&quot;Failed to acquire lock&quot;</span>);
                         <span class="self">self</span>.fairness_counter = <span class="number">2</span>;
-                        sleep(Duration::from_millis(<span class="number">20</span>));
                         <span class="self">self</span>.state = State::GotSrc { src: word };
                     }
                 }
@@ -945,7 +945,6 @@
                 <span class="kw">if </span><span class="kw-2">*</span>expect == <span class="number">0 </span>{
                     <span class="self">self</span>.state = State::AwaitingAck;
                 }
-                sleep(Duration::from_millis(<span class="number">0</span>));
             }
             State::AwaitingAck =&gt; <span class="kw">match </span>word {
                 ACK_OK =&gt; {
@@ -976,8 +975,7 @@
                     </span><span class="macro">log::warn!</span>(<span class="string">&quot;got slave response with len &gt; 16&quot;</span>);
                     <span class="self">self</span>.reset_wait_syn();
                     <span class="comment">// TODO: how to handle?
-                    </span>sleep(Duration::from_millis(<span class="number">10</span>));
-                }
+                </span>}
 
                 <span class="comment">// TODO: handle 0 len case?
 
@@ -1013,7 +1011,6 @@
 
                 <span class="kw">if </span>word == crc_should {
                     transmit.transmit_raw(<span class="kw-2">&amp;</span>[ACK_OK])<span class="question-mark">?</span>;
-                    sleep(Duration::from_millis(<span class="number">15</span>));
                     <span class="kw">let </span>res = ProcessResult::Reply {
                         data: Buffer::from_parts(<span class="kw-2">*</span>buf, <span class="kw-2">*</span>len),
                     };
@@ -1024,7 +1021,6 @@
                     <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
                     </span><span class="macro">log::warn!</span>(<span class="string">&quot;got crc 0x{word:X}, expected 0x{crc_should:X}&quot;</span>);
                     transmit.transmit_raw(<span class="kw-2">&amp;</span>[ACK_ERR])<span class="question-mark">?</span>;
-                    sleep(Duration::from_millis(<span class="number">15</span>));
                     <span class="self">self</span>.success(transmit)<span class="question-mark">?</span>;
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(ProcessResult::ReplyCrcError);
                 }
@@ -1035,7 +1031,6 @@
                     src: <span class="kw-2">*</span>src,
                     dst: word,
                 };
-                sleep(Duration::from_millis(<span class="number">10</span>));
             }
             State::GotDst { src, dst } =&gt; {
                 <span class="self">self</span>.state = State::GotSvc1 {
@@ -1043,7 +1038,6 @@
                     dst: <span class="kw-2">*</span>dst,
                     svc1: word,
                 };
-                sleep(Duration::from_millis(<span class="number">10</span>));
             }
             State::GotSvc1 { src, dst, svc1 } =&gt; {
                 <span class="self">self</span>.state = State::GotSvc2 {
@@ -1051,7 +1045,6 @@
                     dst: <span class="kw-2">*</span>dst,
                     svc: u16::from_le_bytes([<span class="kw-2">*</span>svc1, word]),
                 };
-                sleep(Duration::from_millis(<span class="number">10</span>));
             }
             State::GotSvc2 { src, dst, svc } =&gt; {
                 <span class="self">self</span>.state = State::ReceivingTelegram {
@@ -1062,7 +1055,6 @@
                     cursor: <span class="number">0</span>,
                     buf: [<span class="number">0</span>; <span class="number">16</span>],
                 };
-                sleep(Duration::from_millis(<span class="number">10</span>));
             }
             State::ReceivingTelegram {
                 src,
@@ -1192,7 +1184,7 @@
     <span class="kw">fn </span>success&lt;T: Transmit&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, transmit: <span class="kw-2">&amp;mut </span>T) -&gt; <span class="prelude-ty">Result</span>&lt;(), T::Error&gt; {
         transmit.transmit_syn()<span class="question-mark">?</span>;
         <span class="self">self</span>.flags.clear();
-        <span class="comment">// we do not reset to syn state, because we wait until we receive it back
+        <span class="comment">// we do not reset to syn state, because we wait until we receive it (SYN) back
         </span><span class="self">self</span>.state.reset_unknown();
         <span class="self">self</span>.fairness_counter = FAIRNESS_MAX;
 
@@ -1403,7 +1395,11 @@
 <span class="kw">pub trait </span>Transmit {
     <span class="kw">type </span>Error: Debug;
 
-    <span class="kw">fn </span>transmit_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt;;
+    <span class="doccomment">/// Write all bytes to UART / put them into tx buffer.
+    </span><span class="kw">fn </span>transmit_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt;;
+
+    <span class="doccomment">/// Empty the tx buffer so no more bytes get sent.
+    </span><span class="kw">fn </span>clear_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt;;
 
     <span class="kw">fn </span>transmit_syn(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt; {
         <span class="self">self</span>.transmit_raw(<span class="kw-2">&amp;</span>[SYN])

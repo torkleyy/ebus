@@ -17,6 +17,9 @@ pub use telegram::{Buffer, MasterTelegram, Telegram, TelegramFlag, TelegramFlags
 mod crc;
 mod telegram;
 
+pub const MAX_BUF_U8: usize = MAX_BUF;
+pub const MAX_BUF: usize = MAX_BUF_U8 as usize;
+
 const SYN: u8 = 0xAA;
 const ACK_OK: u8 = 0x00;
 const ACK_ERR: u8 = 0xFF;
@@ -108,9 +111,9 @@ impl EbusDriver {
         transmit: &mut T,
         _token: RequestToken,
     ) -> Result<(), T::Error> {
-        if data.len() > 32 {
+        if data.len() > MAX_BUF {
             #[cfg(feature = "log")]
-            log::warn!("replying with more than 32 bytes");
+            log::warn!("replying with more than MAX_BUF bytes");
         }
 
         let mut counter = 0;
@@ -234,9 +237,9 @@ impl EbusDriver {
                 }
             },
             State::AwaitingLen => {
-                if word > 32 {
+                if word > MAX_BUF {
                     #[cfg(feature = "log")]
-                    log::warn!("got slave response with len > 32");
+                    log::warn!("got slave response with len > MAX_BUF");
                     self.reset_wait_syn();
                     // TODO: how to handle?
                 }
@@ -247,7 +250,7 @@ impl EbusDriver {
                 crc.add(word);
 
                 self.state = State::ReceivingReply {
-                    buf: [0; 32],
+                    buf: [0; MAX_BUF],
                     cursor: 0,
                     total: word,
                     crc,
@@ -317,7 +320,7 @@ impl EbusDriver {
                     svc: *svc,
                     len: word,
                     cursor: 0,
-                    buf: [0; 32],
+                    buf: [0; MAX_BUF],
                 };
             }
             State::ReceivingTelegram {
@@ -481,14 +484,14 @@ enum State {
     AwaitingAck,
     AwaitingLen,
     ReceivingReply {
-        buf: [u8; 32],
+        buf: [u8; MAX_BUF],
         cursor: u8,
         total: u8,
         crc: Crc,
     },
     AwaitingCrc {
         crc: u8,
-        buf: [u8; 32],
+        buf: [u8; MAX_BUF],
         len: u8,
     },
     // === slave states ===
@@ -515,14 +518,14 @@ enum State {
         svc: u16,
         len: u8,
         cursor: u8,
-        buf: [u8; 32],
+        buf: [u8; MAX_BUF],
     },
     ReceivingTelegramCrc {
         src: u8,
         dst: u8,
         svc: u16,
         len: u8,
-        buf: [u8; 32],
+        buf: [u8; MAX_BUF],
         crc: u8,
     },
     /// The master half of master-slave was received.

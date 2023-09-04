@@ -49,6 +49,15 @@ impl EbusDriver {
         }
     }
 
+    /// Indicates whether the next byte needs to be supplied with low (sub-ms) latency
+    pub fn is_time_critical(&self) -> bool {
+        // return `true` for states where a SYN symbol is likely to arrive soon
+        match self.state {
+            State::Unknown | State::Replied => true,
+            _ => false,
+        }
+    }
+
     pub fn process<T: Transmit>(
         &mut self,
         word: u8,
@@ -80,7 +89,6 @@ impl EbusDriver {
                 self.state = State::AcquiringLock;
             } else {
                 self.flags.remove(Flag::WasEscapePrefix);
-                sleep(Duration::from_millis(10));
             }
 
             if was_timeout {
@@ -89,7 +97,7 @@ impl EbusDriver {
                 Ok(ProcessResult::None)
             }
         } else {
-            self.process_slow(word, transmit, sleep, next_msg)
+            self.process_slow(word, transmit, next_msg)
         }
     }
 
@@ -98,7 +106,6 @@ impl EbusDriver {
         &mut self,
         data: &[u8],
         transmit: &mut T,
-        sleep: impl Fn(Duration),
         _token: RequestToken,
     ) -> Result<(), T::Error> {
         if data.len() > 16 {
@@ -114,8 +121,6 @@ impl EbusDriver {
         counter += transmit.transmit_encode(&[crc.calc_crc()])?;
 
         self.state = State::ReplyLoopback { expect: counter };
-
-        sleep(Duration::from_millis(20));
 
         Ok(())
     }
@@ -146,7 +151,6 @@ impl EbusDriver {
         &mut self,
         mut word: u8,
         transmit: &mut T,
-        sleep: impl Fn(Duration),
         msg: Option<&MasterTelegram>,
     ) -> Result<ProcessResult, T::Error> {
         // ugly: we have to build the crc for response before converting escape sequences
@@ -185,7 +189,6 @@ impl EbusDriver {
                 if word == msg.telegram.src {
                     let expect = self.send_data(transmit, msg)?;
                     self.state = State::DataLoopback { expect };
-                    sleep(Duration::from_millis(10));
                 } else {
                     let prio_class = word & 0x0F;
                     let own_prio = msg.telegram.src & 0x0F;
@@ -197,7 +200,6 @@ impl EbusDriver {
                         #[cfg(feature = "log")]
                         log::warn!("Failed to acquire lock");
                         self.fairness_counter = 2;
-                        sleep(Duration::from_millis(20));
                         self.state = State::GotSrc { src: word };
                     }
                 }
@@ -207,7 +209,6 @@ impl EbusDriver {
                 if *expect == 0 {
                     self.state = State::AwaitingAck;
                 }
-                sleep(Duration::from_millis(0));
             }
             State::AwaitingAck => match word {
                 ACK_OK => {
@@ -238,7 +239,6 @@ impl EbusDriver {
                     log::warn!("got slave response with len > 16");
                     self.reset_wait_syn();
                     // TODO: how to handle?
-                    sleep(Duration::from_millis(10));
                 }
 
                 // TODO: handle 0 len case?
@@ -275,7 +275,6 @@ impl EbusDriver {
 
                 if word == crc_should {
                     transmit.transmit_raw(&[ACK_OK])?;
-                    sleep(Duration::from_millis(15));
                     let res = ProcessResult::Reply {
                         data: Buffer::from_parts(*buf, *len),
                     };
@@ -286,7 +285,6 @@ impl EbusDriver {
                     #[cfg(feature = "log")]
                     log::warn!("got crc 0x{word:X}, expected 0x{crc_should:X}");
                     transmit.transmit_raw(&[ACK_ERR])?;
-                    sleep(Duration::from_millis(15));
                     self.success(transmit)?;
                     return Ok(ProcessResult::ReplyCrcError);
                 }
@@ -297,7 +295,6 @@ impl EbusDriver {
                     src: *src,
                     dst: word,
                 };
-                sleep(Duration::from_millis(10));
             }
             State::GotDst { src, dst } => {
                 self.state = State::GotSvc1 {
@@ -305,7 +302,6 @@ impl EbusDriver {
                     dst: *dst,
                     svc1: word,
                 };
-                sleep(Duration::from_millis(10));
             }
             State::GotSvc1 { src, dst, svc1 } => {
                 self.state = State::GotSvc2 {
@@ -313,7 +309,6 @@ impl EbusDriver {
                     dst: *dst,
                     svc: u16::from_le_bytes([*svc1, word]),
                 };
-                sleep(Duration::from_millis(10));
             }
             State::GotSvc2 { src, dst, svc } => {
                 self.state = State::ReceivingTelegram {
@@ -324,7 +319,6 @@ impl EbusDriver {
                     cursor: 0,
                     buf: [0; 16],
                 };
-                sleep(Duration::from_millis(10));
             }
             State::ReceivingTelegram {
                 src,
@@ -454,7 +448,7 @@ impl EbusDriver {
     fn success<T: Transmit>(&mut self, transmit: &mut T) -> Result<(), T::Error> {
         transmit.transmit_syn()?;
         self.flags.clear();
-        // we do not reset to syn state, because we wait until we receive it back
+        // we do not reset to syn state, because we wait until we receive it (SYN) back
         self.state.reset_unknown();
         self.fairness_counter = FAIRNESS_MAX;
 

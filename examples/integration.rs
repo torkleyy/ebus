@@ -30,14 +30,11 @@ impl Transmit for Transmitter {
 }
 
 fn sleep(_d: Duration) {
-    // This function is called by the ebus driver to allow
-    // other tasks to preempt this task (because we are not in a time critical state).
-    // You may sleep here using RTOS functionality if it matches your execution model.
-    // If you use interrupts or async, this function can just be a no-op.
-
-    // It is recommended to handle sub-millisecond sleeps differently than
-    // multiple-ms sleeps, because on sub-ms delays precision matters for
-    // bus arbitration. It could be necessary to busy loop for microsecond sleeps.
+    // This function is called by the ebus driver to
+    // correctly layer its own source address with others'
+    // in order to lock the bus.
+    // It is only called with the arbitration_delay passed
+    // to `EbusDriver::new`.
 }
 
 fn poll_next_msg() -> Option<MasterTelegram> {
@@ -99,7 +96,7 @@ fn main() {
                     0x04 => {
                         // this is meant for us, reply
                         driver
-                            .reply_as_slave(&[0xDE, 0xAD, 0xBE, 0xEF], &mut uart, sleep, token)
+                            .reply_as_slave(&[0xDE, 0xAD, 0xBE, 0xEF], &mut uart, token)
                             .unwrap();
                     }
                     _ => {

@@ -55,7 +55,10 @@ impl EbusDriver {
     /// Indicates whether the next byte needs to be supplied with low (sub-ms) latency
     pub fn is_time_critical(&self) -> bool {
         // return `true` for states where a SYN symbol is likely to arrive soon
-        matches!(self.state, State::Unknown | State::Replied)
+        matches!(
+            self.state,
+            State::Unknown | State::AcquiringLock | State::Replied
+        )
     }
 
     pub fn process<T: Transmit>(

@@ -52,7 +52,7 @@ impl AutoLoopback {
     pub fn process(&mut self, byte: u8, msg: Option<&MasterTelegram>) -> Vec<ProcessResult> {
         let mut results = vec![self
             .driver
-            .process(byte, &mut self.transmit, sleep, msg)
+            .process(byte, &mut self.transmit, sleep, msg, true)
             .unwrap()];
 
         results.extend(self.process_bus(msg));
@@ -76,7 +76,7 @@ impl AutoLoopback {
                 .map(|byte| {
                     // caveat: we are not dropping our message, even when it was already sent / timed out
                     self.driver
-                        .process(byte, &mut self.transmit, sleep, msg)
+                        .process(byte, &mut self.transmit, sleep, msg, true)
                         .unwrap()
                 });
             results.extend(iter);

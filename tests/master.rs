@@ -37,7 +37,7 @@ fn test_send_and_reply_raw(tel: MasterTelegram, reply: &[u8]) -> ProcessResult {
     // deal with fairness counter
     for _ in 0..51 {
         driver
-            .process(0xAA, &mut transmitter, sleep, Some(&msg))
+            .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
             .unwrap();
     }
 
@@ -48,7 +48,7 @@ fn test_send_and_reply_raw(tel: MasterTelegram, reply: &[u8]) -> ProcessResult {
 
         let word = transmitter.sent.remove(0);
         driver
-            .process(word, &mut transmitter, sleep, Some(&msg))
+            .process(word, &mut transmitter, sleep, Some(&msg), true)
             .unwrap();
     }
 
@@ -56,7 +56,7 @@ fn test_send_and_reply_raw(tel: MasterTelegram, reply: &[u8]) -> ProcessResult {
     let mut res = ProcessResult::None;
     for &reply_byte in reply {
         res = driver
-            .process(reply_byte, &mut transmitter, sleep, Some(&msg))
+            .process(reply_byte, &mut transmitter, sleep, Some(&msg), true)
             .unwrap();
     }
 
@@ -141,26 +141,28 @@ fn test_master_retry_lock() {
 
     let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
     for _ in 0..50 {
-        driver.process(0xAA, &mut transmitter, sleep, None).unwrap();
+        driver
+            .process(0xAA, &mut transmitter, sleep, None, true)
+            .unwrap();
     }
     driver
-        .process(0xAA, &mut transmitter, sleep, Some(&msg))
+        .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
     let res = driver
-        .process(0x0F, &mut transmitter, sleep, Some(&msg))
+        .process(0x0F, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
 
     assert!(matches!(res, ProcessResult::None));
 
     transmitter.sent.clear();
     driver
-        .process(0xAA, &mut transmitter, sleep, Some(&msg))
+        .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
 
     assert!(transmitter.sent.is_empty());
 
     driver
-        .process(0xAA, &mut transmitter, sleep, Some(&msg))
+        .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
     assert_eq!(*transmitter.sent.last().unwrap(), msg.telegram.src);
 }
@@ -172,21 +174,23 @@ fn interrupt_lock() {
 
     let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
     for _ in 0..50 {
-        driver.process(0xAA, &mut transmitter, sleep, None).unwrap();
+        driver
+            .process(0xAA, &mut transmitter, sleep, None, true)
+            .unwrap();
     }
     driver
-        .process(0xAA, &mut transmitter, sleep, Some(&msg))
+        .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
     driver
-        .process(msg.telegram.src, &mut transmitter, sleep, Some(&msg))
+        .process(msg.telegram.src, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
     driver
-        .process(0xFF, &mut transmitter, sleep, Some(&msg))
+        .process(0xFF, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
 
     let len = transmitter.sent.len();
     driver
-        .process(0xAA, &mut transmitter, sleep, Some(&msg))
+        .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
 
     assert_eq!(transmitter.sent.len(), len);

@@ -64,6 +64,7 @@ impl EbusDriver {
         transmit: &mut T,
         sleep: impl Fn(Duration),
         next_msg: Option<&MasterTelegram>,
+        is_low_latency: bool,
     ) -> Result<ProcessResult, T::Error> {
         /*
          * High level description of how the code is structured:
@@ -82,7 +83,7 @@ impl EbusDriver {
 
             let was_timeout = self.state.master_is_awaiting();
 
-            if self.process_syn() && next_msg.is_some() {
+            if self.process_syn() && is_low_latency && next_msg.is_some() {
                 #[allow(clippy::unnecessary_unwrap)]
                 let msg = next_msg.unwrap();
                 let src = msg.telegram.src;
@@ -90,9 +91,9 @@ impl EbusDriver {
                 sleep(self.arbitration_delay);
                 transmit.transmit_encode(&[src])?;
                 self.state = State::AcquiringLock;
-            } else {
-                self.flags.remove(Flag::WasEscapePrefix);
             }
+
+            self.flags.remove(Flag::WasEscapePrefix);
 
             if was_timeout {
                 Ok(ProcessResult::Timeout)
@@ -288,7 +289,10 @@ impl EbusDriver {
                     #[cfg(feature = "log")]
                     log::warn!("got crc 0x{word:X}, expected 0x{crc_should:X}");
                     transmit.transmit_raw(&[ACK_ERR])?;
-                    self.success(transmit)?;
+
+                    self.state = State::Unknown;
+
+                    //self.success(transmit)?;
                     return Ok(ProcessResult::ReplyCrcError);
                 }
             }

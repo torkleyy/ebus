@@ -65,7 +65,7 @@ fn main() {
         let byte = wait_for_next_byte();
 
         match driver
-            .process(byte, &mut uart, sleep, msg.as_ref())
+            .process(byte, &mut uart, sleep, msg.as_ref(), true)
             .expect("handle uart error")
         {
             energy_bus::ProcessResult::None => {}

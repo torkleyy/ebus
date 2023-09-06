@@ -324,6 +324,7 @@ impl EbusDriver {
                 let mut len = word;
 
                 if len > MAX_BUF_U8 {
+                    #[cfg(feature = "log")]
                     log::warn!("Receiving master telegram with len > {MAX_BUF_U8}");
                     len = MAX_BUF_U8;
                 }

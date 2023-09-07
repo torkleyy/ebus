@@ -35,11 +35,15 @@ fn test_send_and_reply_raw(tel: MasterTelegram, reply: &[u8]) -> ProcessResult {
     let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
 
     // deal with fairness counter
-    for _ in 0..51 {
+    for _ in 0..50 {
         driver
             .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
             .unwrap();
     }
+    transmitter.sent.clear();
+    driver
+        .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
+        .unwrap();
 
     loop {
         if transmitter.sent.is_empty() {
@@ -149,12 +153,18 @@ fn test_master_retry_lock() {
         .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
     let res = driver
-        .process(0x0F, &mut transmitter, sleep, Some(&msg), true)
+        .process(0x03, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();
 
     assert!(matches!(res, ProcessResult::None));
 
     transmitter.sent.clear();
+    driver
+        .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
+        .unwrap();
+
+    assert!(transmitter.sent.is_empty());
+
     driver
         .process(0xAA, &mut transmitter, sleep, Some(&msg), true)
         .unwrap();

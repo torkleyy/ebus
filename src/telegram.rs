@@ -11,7 +11,7 @@ pub struct MasterTelegram {
     pub flags: TelegramFlags,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Telegram {
     /// QQ - source eBUS address
     pub src: u8,
@@ -23,7 +23,7 @@ pub struct Telegram {
     pub data: Buffer,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Buffer {
     data: [u8; MAX_BUF],
     len: u8,

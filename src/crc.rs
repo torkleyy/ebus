@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Crc {
     crc: u8,
     polynom: u8,

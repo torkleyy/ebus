@@ -111,7 +111,26 @@ fn example1() -> MasterTelegram {
 #[test]
 fn test_example1() {
     let res = test_send_and_reply(example1(), &[0xA9, 0xDA]);
-    assert!(matches!(res.as_reply().unwrap(), [0xA9, 0xDA]));
+    assert!(matches!(dbg!(res).as_reply().unwrap(), [0xA9, 0xDA]));
+}
+
+#[test]
+fn test_data_crc_9a() {
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Debug)
+        .init();
+
+    let telegram = MasterTelegram {
+        telegram: Telegram {
+            src: 0xFF,
+            dest: 0x1C,
+            service: 0x5022,
+            data: Buffer::from_slice(&[0x10, 0x19]),
+        },
+        flags: TelegramFlag::NeedsDataCrc | TelegramFlag::ExpectReply,
+    };
+    let res = test_send_and_reply(telegram, &[0x00, 0x80]);
+    assert_eq!(res.as_reply().unwrap(), &[0x00u8, 0x80]);
 }
 
 #[test]

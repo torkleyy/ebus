@@ -165,6 +165,8 @@ impl EbusDriver {
             crc.add(word);
         }
 
+        log::debug!("word: {word:X}, state: {:?}", self.state);
+
         if self.flags.check_remove(Flag::WasEscapePrefix) {
             if word == 0x00 {
                 word = ESCAPE_PREFIX;
@@ -485,6 +487,7 @@ impl EbusDriver {
     }
 }
 
+#[derive(Debug)]
 enum State {
     /// We are waiting for next SYN
     Unknown,
@@ -589,7 +592,7 @@ impl State {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ProcessResult {
     None,
     /// We replied as slave, master acknowledged
@@ -639,7 +642,7 @@ impl ProcessResult {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RequestToken {
     _priv: (),
 }
@@ -696,7 +699,8 @@ pub trait Transmit {
 
     #[doc(hidden)]
     fn _transmit_count(&mut self, bytes: &[u8]) -> Result<u8, Self::Error> {
-        self.transmit_raw(bytes).map(|_| bytes.len() as u8)
+        self.transmit_raw(bytes)
+            .map(|_| bytes.iter().filter(|b| **b != ESCAPE_PREFIX).count() as u8)
     }
 }
 
@@ -744,11 +748,11 @@ where
             if byte == SYN || byte == ESCAPE_PREFIX {
                 if i != last_transmit {
                     transmit(&bytes[last_transmit as usize..i as usize])?;
-                    last_transmit = i + 1;
                 }
 
                 let escape_code = if byte == SYN { 0x01 } else { 0x00 };
                 transmit(&[ESCAPE_PREFIX, escape_code])?;
+                last_transmit = i + 1;
             }
         }
 

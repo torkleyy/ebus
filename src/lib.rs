@@ -132,6 +132,19 @@ impl EbusDriver {
         Ok(())
     }
 
+    pub fn reply_ack<T: Transmit>(
+        &mut self,
+        transmit: &mut T,
+        _token: RequestToken,
+    ) -> Result<(), T::Error> {
+        let mut counter = 0;
+        counter += transmit.transmit_encode(&[ACK_OK])?;
+
+        self.state = State::ReplyLoopback { expect: counter };
+
+        Ok(())
+    }
+
     /// Returns `true` if we may lock the bus
     fn process_syn(&mut self) -> bool {
         if self.state.has_bus_lock() {

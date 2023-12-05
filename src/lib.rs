@@ -334,7 +334,7 @@ impl EbusDriver {
                 self.state = State::GotSvc2 {
                     src: *src,
                     dst: *dst,
-                    svc: u16::from_le_bytes([*svc1, word]),
+                    svc: u16::from_be_bytes([*svc1, word]),
                 };
             }
             State::GotSvc2 { src, dst, svc } => {

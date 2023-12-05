@@ -94,6 +94,8 @@ impl EbusDriver {
                 sleep(self.arbitration_delay);
                 transmit.transmit_encode(&[src])?;
                 self.state = State::AcquiringLock;
+            } else {
+                self.reset_syn();
             }
 
             self.flags.remove(Flag::WasEscapePrefix);
@@ -494,6 +496,7 @@ impl EbusDriver {
     }
 
     /// this should be called if we receive SYN
+    #[inline]
     pub fn reset_syn(&mut self) {
         self.flags.clear();
         self.state.reset_syn();

@@ -62,6 +62,8 @@ impl AutoLoopback {
     pub fn process_bus(&mut self, msg: Option<&MasterTelegram>) -> Vec<ProcessResult> {
         let mut results = vec![];
 
+        log::info!("processing {} loopback items", self.transmit.loopback.len());
+
         for _ in 0..500 {
             if self.transmit.loopback.is_empty() {
                 return results;
@@ -142,6 +144,10 @@ impl AutoLoopback {
         self.driver
             .reply_as_slave(data, &mut self.transmit, token)
             .unwrap();
+    }
+
+    pub fn reply_ack(&mut self, token: RequestToken) {
+        self.driver.reply_ack(&mut self.transmit, token).unwrap();
     }
 }
 

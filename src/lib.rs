@@ -375,7 +375,7 @@ impl EbusDriver {
                         buf: *buf,
                         crc: Crc::new(self.crc_poly_telegram)
                             .add_decoded(&[*src, *dst])
-                            .add_decoded(&svc.to_le_bytes())
+                            .add_decoded(&svc.to_be_bytes())
                             .add_decoded(&[*len])
                             .add_decoded(&buf[..*len as usize])
                             .calc_crc(),

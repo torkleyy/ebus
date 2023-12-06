@@ -180,6 +180,7 @@ impl EbusDriver {
             crc.add(word);
         }
 
+        #[cfg(feature = "log")]
         log::debug!("word: {word:X}, state: {:?}", self.state);
 
         if self.flags.check_remove(Flag::WasEscapePrefix) {

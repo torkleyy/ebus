@@ -5,10 +5,6 @@ use helper::{example1, AutoLoopback};
 
 #[test]
 fn example1_ok() {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .init();
-
     let mut d = AutoLoopback::new();
     let msg = example1();
 
@@ -36,10 +32,6 @@ fn example1_ok() {
 
 #[test]
 fn time_program() {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .init();
-
     let mut d = AutoLoopback::new();
     let msg = MasterTelegram {
         telegram: Telegram {

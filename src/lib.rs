@@ -25,8 +25,6 @@ const ACK_OK: u8 = 0x00;
 const ACK_ERR: u8 = 0xFF;
 const ESCAPE_PREFIX: u8 = 0xA9;
 
-const FAIRNESS_MAX: u8 = 8;
-
 pub struct EbusDriver {
     crc_poly_telegram: u8,
     crc_poly_data: u8,
@@ -37,14 +35,21 @@ pub struct EbusDriver {
     ///
     /// Allows bus access if 0, gets reset to FAIRNESS_MAX after successful access.
     fairness_counter: u8,
+    fairness_max: u8,
     state: State,
 }
 
 impl EbusDriver {
-    pub fn new(arbitration_delay: Duration, crc_poly_telegram: u8, crc_poly_data: u8) -> Self {
+    pub fn new(
+        arbitration_delay: Duration,
+        crc_poly_telegram: u8,
+        crc_poly_data: u8,
+        fairness_max: u8,
+    ) -> Self {
         EbusDriver {
             flags: Default::default(),
-            fairness_counter: FAIRNESS_MAX,
+            fairness_counter: fairness_max,
+            fairness_max,
             state: State::Start,
             crc_poly_telegram,
             crc_poly_data,
@@ -486,7 +491,7 @@ impl EbusDriver {
         self.flags.clear();
         // we do not reset to syn state, because we wait until we receive it (SYN) back
         self.state.reset_unknown();
-        self.fairness_counter = FAIRNESS_MAX;
+        self.fairness_counter = self.fairness_max;
 
         Ok(())
     }

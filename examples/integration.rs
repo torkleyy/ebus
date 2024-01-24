@@ -54,7 +54,7 @@ fn main() {
     // give tx to application so it can queue messages
 
     let mut uart = Transmitter(UartTxDriver);
-    let mut driver = EbusDriver::new(ARBITRATION_DELAY, CRC_POLYNOM_TELEGRAM, CRC_POLYNOM_DATA);
+    let mut driver = EbusDriver::new(ARBITRATION_DELAY, CRC_POLYNOM_TELEGRAM, CRC_POLYNOM_DATA, 8);
 
     let mut msg = None;
     loop {

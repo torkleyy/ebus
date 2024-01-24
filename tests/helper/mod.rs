@@ -38,7 +38,7 @@ fn sleep(_: Duration) {}
 impl AutoLoopback {
     pub fn new() -> Self {
         let mut this = AutoLoopback {
-            driver: EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C),
+            driver: EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C, 8),
             transmit: Default::default(),
         };
 

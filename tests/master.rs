@@ -32,7 +32,7 @@ fn test_send_and_reply_raw(tel: MasterTelegram, reply: &[u8]) -> ProcessResult {
     let mut transmitter = TestTransmitter { sent: vec![] };
     let msg = tel;
 
-    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
+    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C, 0);
 
     // deal with fairness counter
     for _ in 0..50 {
@@ -134,6 +134,21 @@ fn test_data_crc_9a() {
 }
 
 #[test]
+fn test_0_len_reply() {
+    let telegram = MasterTelegram {
+        telegram: Telegram {
+            src: 0xFF,
+            dest: 0x3C,
+            service: 0x4050,
+            data: Buffer::from_slice(&[0x31]),
+        },
+        flags: TelegramFlag::NeedsDataCrc | TelegramFlag::ExpectReply,
+    };
+    let res = test_send_and_reply(telegram, &[]);
+    assert_eq!(res.as_reply().unwrap(), &[]);
+}
+
+#[test]
 fn test_example1_auto_lb() {
     use ProcessResult::*;
 
@@ -162,7 +177,7 @@ fn test_master_retry_lock() {
     let mut transmitter = TestTransmitter { sent: vec![] };
     let msg = example1();
 
-    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
+    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C, 0);
     for _ in 0..50 {
         driver
             .process(0xAA, &mut transmitter, sleep, None, true)
@@ -201,7 +216,7 @@ fn interrupt_lock() {
     let mut transmitter = TestTransmitter { sent: vec![] };
     let msg = example1();
 
-    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C);
+    let mut driver = EbusDriver::new(Duration::from_micros(123), 0x9B, 0x5C, 0);
     for _ in 0..50 {
         driver
             .process(0xAA, &mut transmitter, sleep, None, true)

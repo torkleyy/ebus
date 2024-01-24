@@ -276,12 +276,20 @@ impl EbusDriver {
                 let mut crc = Crc::new(self.crc_poly_telegram);
                 crc.add(word);
 
-                self.state = State::ReceivingReply {
-                    buf: [0; MAX_BUF],
-                    cursor: 0,
-                    total: word,
-                    crc,
-                };
+                if word > 0 {
+                    self.state = State::ReceivingReply {
+                        buf: [0; MAX_BUF],
+                        cursor: 0,
+                        total: word,
+                        crc,
+                    };
+                } else {
+                    self.state = State::AwaitingCrc {
+                        buf: [0; MAX_BUF],
+                        len: 0,
+                        crc: crc.calc_crc(),
+                    };
+                }
             }
             State::ReceivingReply {
                 buf,

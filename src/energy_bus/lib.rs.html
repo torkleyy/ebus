@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="energy_bus" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="energy_bus" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -793,15 +794,16 @@
 <a href="#793" id="793">793</a>
 <a href="#794" id="794">794</a>
 <a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
 </pre></div><pre class="rust"><code><span class="attr">#![no_std]
-#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
+#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 </span><span class="doccomment">//!
 //! ---
 //!
 //! Here is an example how once could integrate this library:
 //!
 //! ```rust,no_run
-</span><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../examples/integration.rs&quot;</span>)]
+</span><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../examples/integration.rs"</span>)]
 </span><span class="doccomment">//! ```
 
 </span><span class="kw">use </span>core::{fmt::Debug, time::Duration};
@@ -826,7 +828,7 @@
     arbitration_delay: Duration,
 
     flags: Flags,
-    <span class="doccomment">/// Fairness counter, confusingly called &quot;lock counter&quot; in spec.
+    <span class="doccomment">/// Fairness counter, confusingly called "lock counter" in spec.
     ///
     /// Allows bus access if 0, gets reset to FAIRNESS_MAX after successful access.
     </span>fairness_counter: u8,
@@ -918,14 +920,15 @@
         _token: RequestToken,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), T::Error&gt; {
         <span class="kw">if </span>data.len() &gt; MAX_BUF {
-            <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-            </span><span class="macro">log::warn!</span>(<span class="string">&quot;replying with more than MAX_BUF bytes&quot;</span>);
+            <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+            </span><span class="macro">log::warn!</span>(<span class="string">"replying with more than MAX_BUF bytes"</span>);
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>counter = <span class="number">0</span>;
-        counter += transmit.transmit_encode(<span class="kw-2">&amp;</span>[ACK_OK, data.len() <span class="kw">as </span>u8])<span class="question-mark">?</span>;
+        counter += transmit.transmit_encode(<span class="kw-2">&amp;</span>[ACK_OK])<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>crc = Crc::new(<span class="self">self</span>.crc_poly_telegram);
+        counter += transmit.transmit_encode_with_crc(<span class="kw-2">&amp;</span>[data.len() <span class="kw">as </span>u8], <span class="kw-2">&amp;mut </span>crc)<span class="question-mark">?</span>;
         counter += transmit.transmit_encode_with_crc(data, <span class="kw-2">&amp;mut </span>crc)<span class="question-mark">?</span>;
         counter += transmit.transmit_encode(<span class="kw-2">&amp;</span>[crc.calc_crc()])<span class="question-mark">?</span>;
 
@@ -950,12 +953,12 @@
     <span class="doccomment">/// Returns `true` if we may lock the bus
     </span><span class="kw">fn </span>process_syn(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
         <span class="kw">if </span><span class="self">self</span>.state.has_bus_lock() {
-            <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-            </span><span class="macro">log::warn!</span>(<span class="string">&quot;unexpected SYN while holding bus lock&quot;</span>);
+            <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+            </span><span class="macro">log::warn!</span>(<span class="string">"unexpected SYN while holding bus lock"</span>);
             <span class="self">self</span>.reset_syn();
         } <span class="kw">else if </span><span class="self">self</span>.state.is_acquiring() {
-            <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-            </span><span class="macro">log::warn!</span>(<span class="string">&quot;unexpected double SYN prevented lock&quot;</span>);
+            <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+            </span><span class="macro">log::warn!</span>(<span class="string">"unexpected double SYN prevented lock"</span>);
             <span class="self">self</span>.reset_syn();
         } <span class="kw">else if </span><span class="self">self</span>.is_allowed_to_lock() {
             <span class="kw">return </span><span class="bool-val">true</span>;
@@ -980,8 +983,8 @@
             crc.add(word);
         }
 
-        <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-        </span><span class="macro">log::debug!</span>(<span class="string">&quot;word: {word:X}, state: {:?}&quot;</span>, <span class="self">self</span>.state);
+        <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+        </span><span class="macro">log::debug!</span>(<span class="string">"word: {word:X}, state: {:?}"</span>, <span class="self">self</span>.state);
 
         <span class="kw">if </span><span class="self">self</span>.flags.check_remove(Flag::WasEscapePrefix) {
             <span class="kw">if </span>word == <span class="number">0x00 </span>{
@@ -989,8 +992,8 @@
             } <span class="kw">else if </span>word == <span class="number">0x01 </span>{
                 word = SYN;
             } <span class="kw">else </span>{
-                <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                </span><span class="macro">log::warn!</span>(<span class="string">&quot;detected invalid escape sequence&quot;</span>);
+                <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                </span><span class="macro">log::warn!</span>(<span class="string">"detected invalid escape sequence"</span>);
                 <span class="self">self</span>.reset_wait_syn();
 
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(ProcessResult::None);
@@ -1022,8 +1025,8 @@
                         <span class="comment">// instantly try again on next SYN
                         </span><span class="self">self</span>.state = State::Unknown;
                     } <span class="kw">else </span>{
-                        <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                        </span><span class="macro">log::warn!</span>(<span class="string">&quot;Failed to acquire lock&quot;</span>);
+                        <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                        </span><span class="macro">log::warn!</span>(<span class="string">"Failed to acquire lock"</span>);
                         <span class="self">self</span>.fairness_counter = <span class="number">2</span>;
                         <span class="self">self</span>.state = State::GotSrc { src: word };
                     }
@@ -1047,11 +1050,11 @@
                     }
                 }
                 x =&gt; {
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;telegram not acknowledged&quot;</span>);
+                    <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                    </span><span class="macro">log::warn!</span>(<span class="string">"telegram not acknowledged"</span>);
                     <span class="kw">if </span>x != ACK_ERR {
-                        <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                        </span><span class="macro">log::warn!</span>(<span class="string">&quot;expected ack, got non-ack byte: 0x{word:X}&quot;</span>);
+                        <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                        </span><span class="macro">log::warn!</span>(<span class="string">"expected ack, got non-ack byte: 0x{word:X}"</span>);
                     }
                     <span class="self">self</span>.reset_wait_syn();
 
@@ -1060,8 +1063,8 @@
             },
             State::AwaitingLen =&gt; {
                 <span class="kw">if </span>word &gt; MAX_BUF_U8 {
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;got slave response with len &gt; MAX_BUF&quot;</span>);
+                    <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                    </span><span class="macro">log::warn!</span>(<span class="string">"got slave response with len &gt; MAX_BUF"</span>);
                     <span class="self">self</span>.reset_wait_syn();
                     <span class="comment">// TODO: how to handle?
                 </span>}
@@ -1115,8 +1118,8 @@
 
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(res);
                 } <span class="kw">else </span>{
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;got crc 0x{word:X}, expected 0x{crc_should:X}&quot;</span>);
+                    <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                    </span><span class="macro">log::warn!</span>(<span class="string">"got crc 0x{word:X}, expected 0x{crc_should:X}"</span>);
                     transmit.transmit_raw(<span class="kw-2">&amp;</span>[ACK_ERR])<span class="question-mark">?</span>;
 
                     <span class="self">self</span>.state = State::Unknown;
@@ -1150,8 +1153,8 @@
                 <span class="kw">let </span><span class="kw-2">mut </span>len = word;
 
                 <span class="kw">if </span>len &gt; MAX_BUF_U8 {
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;Receiving master telegram with len &gt; {MAX_BUF_U8}&quot;</span>);
+                    <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                    </span><span class="macro">log::warn!</span>(<span class="string">"Receiving master telegram with len &gt; {MAX_BUF_U8}"</span>);
                     len = MAX_BUF_U8;
                 }
 
@@ -1212,8 +1215,8 @@
                     <span class="self">self</span>.state = State::GotTelegram;
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(res);
                 } <span class="kw">else </span>{
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;crc verification of telegram from 0x{src:X} failed: expected 0x{crc:X}, got 0x{word:X}&quot;</span>);
+                    <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                    </span><span class="macro">log::warn!</span>(<span class="string">"crc verification of telegram from 0x{src:X} failed: expected 0x{crc:X}, got 0x{word:X}"</span>);
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(ProcessResult::TelegramCrcError);
                 }
             }
@@ -1234,11 +1237,11 @@
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(ProcessResult::SlaveAckOk);
                 }
                 x =&gt; {
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                    </span><span class="macro">log::warn!</span>(<span class="string">&quot;reply not acknowledged&quot;</span>);
+                    <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                    </span><span class="macro">log::warn!</span>(<span class="string">"reply not acknowledged"</span>);
                     <span class="kw">if </span>x != ACK_ERR {
-                        <span class="attr">#[cfg(feature = <span class="string">&quot;log&quot;</span>)]
-                        </span><span class="macro">log::warn!</span>(<span class="string">&quot;expected ack, got non-ack byte: 0x{word:X}&quot;</span>);
+                        <span class="attr">#[cfg(feature = <span class="string">"log"</span>)]
+                        </span><span class="macro">log::warn!</span>(<span class="string">"expected ack, got non-ack byte: 0x{word:X}"</span>);
                     }
                     <span class="self">self</span>.reset_wait_syn();
 
@@ -1559,7 +1562,7 @@
         <span class="comment">// count the number of bytes we transmit
         </span><span class="kw">let </span><span class="kw-2">mut </span>byte_counter = <span class="number">0u8</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>transmit = |bytes: <span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>[u8]| {
+        <span class="kw">let </span><span class="kw-2">mut </span>transmit = |bytes: <span class="kw-2">&amp;</span><span class="lifetime">'_ </span>[u8]| {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(crc) = <span class="kw-2">&amp;mut </span>crc {
                 crc.add_multiple(bytes);
             }

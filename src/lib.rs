@@ -128,9 +128,10 @@ impl EbusDriver {
         }
 
         let mut counter = 0;
-        counter += transmit.transmit_encode(&[ACK_OK, data.len() as u8])?;
+        counter += transmit.transmit_encode(&[ACK_OK])?;
 
         let mut crc = Crc::new(self.crc_poly_telegram);
+        counter += transmit.transmit_encode_with_crc(&[data.len() as u8], &mut crc)?;
         counter += transmit.transmit_encode_with_crc(data, &mut crc)?;
         counter += transmit.transmit_encode(&[crc.calc_crc()])?;
 

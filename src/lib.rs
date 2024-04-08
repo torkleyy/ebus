@@ -157,7 +157,7 @@ impl EbusDriver {
     fn process_syn(&mut self) -> bool {
         if self.state.has_bus_lock() {
             #[cfg(feature = "log")]
-            log::warn!("unexpected SYN while holding bus lock");
+            log::info!("timeout: SYN while holding bus lock");
             self.reset_syn();
         } else if self.state.is_acquiring() {
             #[cfg(feature = "log")]
@@ -229,7 +229,7 @@ impl EbusDriver {
                         self.state = State::Unknown;
                     } else {
                         #[cfg(feature = "log")]
-                        log::warn!("Failed to acquire lock");
+                        log::info!("failed to acquire lock");
                         self.fairness_counter = 2;
                         self.state = State::GotSrc { src: word };
                     }
@@ -357,7 +357,7 @@ impl EbusDriver {
 
                 if len > MAX_BUF_U8 {
                     #[cfg(feature = "log")]
-                    log::warn!("Receiving master telegram with len > {MAX_BUF_U8}");
+                    log::warn!("receiving master telegram with len > {MAX_BUF_U8}");
                     len = MAX_BUF_U8;
                 }
 
@@ -405,21 +405,24 @@ impl EbusDriver {
                 buf,
                 crc,
             } => {
+                let telegram = Telegram {
+                    src: *src,
+                    dest: *dst,
+                    service: *svc,
+                    data: Buffer::from_parts(*buf, *len),
+                };
                 if *crc == word {
                     let res = ProcessResult::Request {
-                        telegram: Telegram {
-                            src: *src,
-                            dest: *dst,
-                            service: *svc,
-                            data: Buffer::from_parts(*buf, *len),
-                        },
+                        telegram,
                         token: RequestToken { _priv: () },
                     };
                     self.state = State::GotTelegram;
                     return Ok(res);
                 } else {
                     #[cfg(feature = "log")]
-                    log::warn!("crc verification of telegram from 0x{src:X} failed: expected 0x{crc:X}, got 0x{word:X}");
+                    log::warn!(
+                        "crc failed of {telegram:?} failed: expected 0x{crc:X}, got 0x{word:X}"
+                    );
                     return Ok(ProcessResult::TelegramCrcError);
                 }
             }

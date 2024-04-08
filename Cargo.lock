@@ -27,8 +27,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "energy-bus"
-version = "0.2.0"
+name = "ebus"
+version = "0.2.3"
 dependencies = [
  "env_logger",
  "log",

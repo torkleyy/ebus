@@ -420,9 +420,8 @@ impl EbusDriver {
                     return Ok(res);
                 } else {
                     #[cfg(feature = "log")]
-                    log::warn!(
-                        "crc failed of {telegram:02X?} failed: expected 0x{crc:X}, got 0x{word:X}"
-                    );
+                    log::warn!("crc of {telegram:02X?} failed: expected 0x{crc:X}, got 0x{word:X}");
+                    self.state = State::Unknown;
                     return Ok(ProcessResult::TelegramCrcError);
                 }
             }

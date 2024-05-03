@@ -1,6 +1,6 @@
 use core::time::Duration;
 
-use energy_bus::{EbusDriver, MasterTelegram, Transmit};
+use ebus::{EbusDriver, MasterTelegram, Transmit};
 
 // Depends on hardware and latency. Right value must be chosen to ensure
 // layering of the first byte after `SYN`
@@ -68,32 +68,32 @@ fn main() {
             .process(byte, &mut uart, sleep, msg.as_ref(), true)
             .expect("handle uart error")
         {
-            energy_bus::ProcessResult::None => {}
-            energy_bus::ProcessResult::MasterAckOk => {
+            ebus::ProcessResult::None => {}
+            ebus::ProcessResult::MasterAckOk => {
                 // successfully sent message with no expected reply
                 msg = None; // remove message from queue
             }
-            energy_bus::ProcessResult::MasterAckErr => {
+            ebus::ProcessResult::MasterAckErr => {
                 // recipient replied ACK_ERR
                 msg = None; // remove message from queue
                             // could also try to requeue this message for later
             }
-            energy_bus::ProcessResult::Timeout => {
+            ebus::ProcessResult::Timeout => {
                 // recipient did not reply within AUTO-SYN
                 msg = None; // remove message from queue
                             // could also try to requeue this message for later
             }
-            energy_bus::ProcessResult::ReplyCrcError => {
+            ebus::ProcessResult::ReplyCrcError => {
                 // recipient sent reply but CRC check failed
                 msg = None; // remove message from queue
                             // could also try to requeue this message for later
             }
-            energy_bus::ProcessResult::TelegramCrcError => {
+            ebus::ProcessResult::TelegramCrcError => {
                 // some master sent telegram but CRC check failed
                 msg = None; // remove message from queue
                             // could also try to requeue this message for later
             }
-            energy_bus::ProcessResult::Request { telegram, token } => {
+            ebus::ProcessResult::Request { telegram, token } => {
                 match telegram.dest {
                     0xFF => {
                         // this is meant for us, but master to master
@@ -110,14 +110,14 @@ fn main() {
                     }
                 }
             }
-            energy_bus::ProcessResult::Reply { data: _ } => {
+            ebus::ProcessResult::Reply { data: _ } => {
                 // success
                 msg = None; // remove message from queue
             }
-            energy_bus::ProcessResult::SlaveAckOk => {
+            ebus::ProcessResult::SlaveAckOk => {
                 // our reply was acknowledged
             }
-            energy_bus::ProcessResult::SlaveAckErr => {
+            ebus::ProcessResult::SlaveAckErr => {
                 // our reply was not acknowledged
             }
         }

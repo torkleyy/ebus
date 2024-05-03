@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use energy_bus::{
+use ebus::{
     Buffer, Crc, EbusDriver, MasterTelegram, ProcessResult, Telegram, TelegramFlag, Transmit,
 };
 

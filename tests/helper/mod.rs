@@ -2,7 +2,7 @@
 
 use std::{iter::once, time::Duration};
 
-use energy_bus::{
+use ebus::{
     Buffer, Crc, EbusDriver, MasterTelegram, ProcessResult, RequestToken, Telegram, TelegramFlag,
     Transmit,
 };

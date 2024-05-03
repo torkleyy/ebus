@@ -1,6 +1,6 @@
 mod helper;
 
-use energy_bus::{Buffer, MasterTelegram, ProcessResult, Telegram, TelegramFlags};
+use ebus::{Buffer, MasterTelegram, ProcessResult, Telegram, TelegramFlags};
 use helper::{example1, AutoLoopback};
 
 #[test]

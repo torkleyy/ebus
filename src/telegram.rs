@@ -23,7 +23,7 @@ pub struct Telegram {
     pub data: Buffer,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Buffer {
     data: [u8; MAX_BUF],
     len: u8,
@@ -56,6 +56,12 @@ impl Buffer {
 
     pub fn as_bytes_mut(&mut self) -> &mut [u8] {
         &mut self.data[..self.len as usize]
+    }
+}
+
+impl core::fmt::Debug for Buffer {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_list().entries(self.as_bytes().iter()).finish()
     }
 }
 

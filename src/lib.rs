@@ -313,13 +313,10 @@ impl EbusDriver {
                 let crc_should = *crc;
 
                 if word == crc_should {
-                    transmit.transmit_raw(&[ACK_OK])?;
-                    let res = ProcessResult::Reply {
-                        data: Buffer::from_parts(*buf, *len),
-                    };
-                    self.success(transmit)?;
+                    let data = Buffer::from_parts(*buf, *len);
+                    self.state = State::VetReply { data };
 
-                    return Ok(res);
+                    return Ok(ProcessResult::VetReply { timeout_ms: 6 });
                 } else {
                     #[cfg(feature = "log")]
                     log::warn!("got crc 0x{word:X}, expected 0x{crc_should:X}");
@@ -330,6 +327,35 @@ impl EbusDriver {
                     //self.success(transmit)?;
                     return Ok(ProcessResult::ReplyCrcError);
                 }
+            }
+            State::VetReply { data } => {
+                #[cfg(feature = "log")]
+                log::info!(
+                    "reply vetting: got byte 0x{} when we expected end of message",
+                    word
+                );
+
+                let data = data.clone();
+                self.state = State::Unknown;
+                return Ok(ProcessResult::Reply { data, clean: false });
+            }
+            State::VetSuccess { data } => {
+                if word != ACK_OK {
+                    #[cfg(feature = "log")]
+                    log::warn!(
+                        "reply vetting: expected to hear back our own ACK OK (00), but got 0x{:X}",
+                        word
+                    );
+                }
+
+                let res = Ok(ProcessResult::Reply {
+                    data: data.clone(),
+                    clean: true,
+                });
+
+                self.success(transmit)?;
+
+                return res;
             }
             // === slave states ===
             State::GotSrc { src } => {
@@ -458,6 +484,18 @@ impl EbusDriver {
         Ok(ProcessResult::None)
     }
 
+    pub fn vet_timeout<T: Transmit>(&mut self, transmit: &mut T) -> Result<(), T::Error> {
+        transmit.transmit_raw(&[ACK_OK])?;
+
+        let State::VetReply { data } = self.state.take() else {
+            unreachable!("vet_timeout called in wrong state");
+        };
+
+        self.state = State::VetSuccess { data };
+
+        Ok(())
+    }
+
     fn send_data<T: Transmit>(
         &mut self,
         transmit: &mut T,
@@ -579,6 +617,14 @@ enum State {
         buf: [u8; MAX_BUF],
         crc: u8,
     },
+    /// We are making sure the slave provides a clean response without additional garbage
+    VetReply {
+        data: Buffer,
+    },
+    /// Timeout (=successful) vetting
+    VetSuccess {
+        data: Buffer,
+    },
     /// The master half of master-slave was received.
     GotTelegram,
     /// We are waiting to get ACK back.
@@ -591,6 +637,9 @@ enum State {
 }
 
 impl State {
+    pub fn take(&mut self) -> Self {
+        core::mem::replace(self, Self::Unknown)
+    }
     pub fn has_bus_lock(&self) -> bool {
         matches!(
             self,
@@ -628,6 +677,10 @@ impl State {
 #[derive(Debug, PartialEq)]
 pub enum ProcessResult {
     None,
+    /// We got a reply but would like to vet it for timeout ms. After that, call vet_timeout()
+    VetReply {
+        timeout_ms: u16,
+    },
     /// We replied as slave, master acknowledged
     SlaveAckOk,
     /// We replied as slave, master did not acknowledge
@@ -650,6 +703,7 @@ pub enum ProcessResult {
     /// Slave sent reply
     Reply {
         data: Buffer,
+        clean: bool,
     },
 }
 
@@ -667,7 +721,7 @@ impl ProcessResult {
     }
 
     pub fn as_reply(&self) -> Option<&[u8]> {
-        if let Self::Reply { data } = self {
+        if let Self::Reply { data, .. } = self {
             Some(data.as_bytes())
         } else {
             None
